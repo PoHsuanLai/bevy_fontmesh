@@ -1,6 +1,6 @@
 [package]
 name = "bevy_fontmesh"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Po Hsuan Lai"]
 description = "Simple and focused Bevy plugin for generating 3D text meshes from fonts"
@@ -11,7 +11,7 @@ homepage = "https://github.com/PoHsuanLai/bevy_fontmesh"
 readme = "README.md"
 keywords = ["bevy", "font", "mesh", "text", "ttf2mesh"]
 categories = ["graphics", "game-engines", "rendering"]
-exclude = ["assets/"]
+exclude = ["assets/", "images/"]
 
 [dependencies]
 bevy = { version = "0.17", default-features = false, features = [
