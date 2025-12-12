@@ -5,15 +5,11 @@
 [![Documentation](https://docs.rs/bevy_fontmesh/badge.svg)](https://docs.rs/bevy_fontmesh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A simple and focused Bevy plugin for generating 3D text meshes from fonts. Powered by [fontmesh](https://crates.io/crates/fontmesh).
+A simple Bevy plugin for generating 3D text meshes from fonts. Powered by [fontmesh](https://crates.io/crates/fontmesh).
 
 <p align="center">
   <img src="images/demo.gif" alt="bevy_fontmesh demo" />
 </p>
-
-## Philosophy
-
-This plugin does **one thing only**: generating mesh geometry from fonts. It intentionally leaves materials, lighting, transforms, and rendering to Bevy's standard systems.
 
 ## Quick Start
 
@@ -44,22 +40,6 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // Camera
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(0.0, 0.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
-
-    // Light
-    commands.spawn((
-        PointLight {
-            intensity: 2000.0,
-            ..default()
-        },
-        Transform::from_xyz(4.0, 8.0, 4.0),
-    ));
-
-    // 3D Text
     commands.spawn(TextMeshBundle {
         text_mesh: TextMesh {
             text: "Hello, World!".to_string(),
@@ -93,8 +73,6 @@ TextMeshStyle {
     ..default()
 }
 ```
-
-Available anchors: `TopLeft`, `TopCenter`, `TopRight`, `CenterLeft`, `Center`, `CenterRight`, `BottomLeft`, `BottomCenter`, `BottomRight`, `Custom(Vec2)`.
 
 ## Text Justification
 
@@ -148,29 +126,17 @@ cargo run --example anchors
 cargo run --release--example stress_test
 ```
 
-## Supported Font Formats
-
-- TrueType (`.ttf`)
-
-**Note**: OpenType fonts (`.otf`) with TrueType outlines are supported, but OpenType fonts with CFF/PostScript outlines are not currently supported (this is a limitation of the underlying ttf-parser library used by fontmesh).
-
-Place your fonts in an `assets/fonts/` directory and load them with `asset_server.load("fonts/yourfont.ttf")`.
-
 ## Limitations
 
-This plugin is intentionally simple. It does **not** provide:
+I try not to overengineer this plugin. It does **not** provide:
 
-- Text kerning or ligatures (uses basic glyph advances)
+- Text kerning or ligatures
 - Right-to-left (RTL) text layout
 - Dynamic text effects (shadows, outlines)
 - 2D text rendering
 - Text wrapping by width
 
 For advanced typography needs, consider implementing additional logic on top of the generated meshes.
-
-## Performance
-
-The plugin regenerates meshes only when `TextMesh` components change. For static text, there's no per-frame overhead beyond normal Bevy rendering.
 
 ## Bevy Version Compatibility
 
