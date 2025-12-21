@@ -1,4 +1,4 @@
-use crate::component::{JustifyText, TextAnchor, TextMesh};
+use crate::component::{GlyphMesh, JustifyText, TextAnchor, TextMesh, TextMeshGlyphs};
 use crate::FontMesh;
 use bevy::asset::RenderAssetUsages;
 use bevy::log::warn;
@@ -7,8 +7,13 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use fontmesh::Font;
 
+/// Marker component indicating that a [`TextMesh`] has been processed.
 #[derive(Component)]
 pub struct TextMeshComputed;
+
+/// Marker component indicating that a [`TextMeshGlyphs`] has been processed.
+#[derive(Component)]
+pub struct TextMeshGlyphsComputed;
 
 type TextMeshQuery<'w, 's> = Query<
     'w,
@@ -173,5 +178,207 @@ pub fn update_text_meshes(
 
         // 7. Mark as computed
         commands.entity(entity).insert(TextMeshComputed);
+    }
+}
+
+type TextMeshGlyphsQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static TextMeshGlyphs,
+        &'static MeshMaterial3d<StandardMaterial>,
+    ),
+    Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>,
+>;
+
+/// System to generate per-character mesh entities for [`TextMeshGlyphs`] components.
+///
+/// This system spawns a separate child entity for each character in the text,
+/// allowing for per-character styling, animations, and interactions.
+pub fn update_glyph_meshes(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    font_assets: Res<Assets<FontMesh>>,
+    query: TextMeshGlyphsQuery,
+    children_query: Query<&Children>,
+    glyph_query: Query<Entity, With<GlyphMesh>>,
+) {
+    for (entity, text_glyphs, default_material) in query.iter() {
+        // 1. Try to get the font data
+        let font_asset = match font_assets.get(&text_glyphs.font) {
+            Some(f) => f,
+            None => {
+                // Font not loaded yet, skip this frame
+                continue;
+            }
+        };
+
+        // 2. Load fontmesh
+        let font = match Font::from_bytes(&font_asset.data) {
+            Ok(f) => f,
+            Err(e) => {
+                warn!("Failed to parse font for entity {:?}: {:?}", entity, e);
+                continue;
+            }
+        };
+
+        // 3. Despawn existing glyph children
+        if let Ok(children) = children_query.get(entity) {
+            for child in children.iter() {
+                if glyph_query.contains(child) {
+                    commands.entity(child).despawn();
+                }
+            }
+        }
+
+        // 4. Calculate line widths for justification
+        let line_height = font.ascender() - font.descender() + font.line_gap();
+        let lines: Vec<&str> = text_glyphs.text.split('\n').collect();
+
+        let line_widths: Vec<f32> = lines
+            .iter()
+            .map(|line| {
+                let mut width = 0.0;
+                for ch in line.chars() {
+                    if let Ok(glyph) = font.glyph_by_char(ch) {
+                        width += glyph.advance();
+                    } else if ch.is_whitespace() {
+                        width += 0.3;
+                    }
+                }
+                width
+            })
+            .collect();
+
+        // 5. Spawn glyph entities
+        let mut char_index = 0;
+
+        commands.entity(entity).with_children(|parent| {
+            for (line_index, line) in lines.iter().enumerate() {
+                let line_width = line_widths[line_index];
+
+                // Calculate X start offset based on justification
+                let x_start = match text_glyphs.style.justify {
+                    JustifyText::Left => 0.0,
+                    JustifyText::Center => -line_width * 0.5,
+                    JustifyText::Right => -line_width,
+                };
+
+                let mut cursor_x = x_start;
+                let cursor_y = -(line_index as f32) * line_height;
+
+                for ch in line.chars() {
+                    let advance = if let Ok(glyph) = font.glyph_by_char(ch) {
+                        glyph.advance()
+                    } else if ch.is_whitespace() {
+                        0.3
+                    } else {
+                        0.0
+                    };
+
+                    // Skip whitespace but still count it
+                    if ch.is_whitespace() {
+                        cursor_x += advance;
+                        char_index += 1;
+                        continue;
+                    }
+
+                    // Generate mesh for this character
+                    let mesh_res = font.glyph_by_char(ch).and_then(|g| {
+                        g.with_subdivisions(text_glyphs.style.subdivision)
+                            .to_mesh_3d(text_glyphs.style.depth)
+                    });
+
+                    if let Ok(glyph_mesh_data) = mesh_res {
+                        let mut vertices = Vec::with_capacity(glyph_mesh_data.vertices.len());
+                        let mut normals = Vec::with_capacity(glyph_mesh_data.normals.len());
+
+                        for v in &glyph_mesh_data.vertices {
+                            vertices.push([v.x, v.y, v.z]);
+                        }
+
+                        for n in &glyph_mesh_data.normals {
+                            normals.push([n.x, n.y, n.z]);
+                        }
+
+                        let mut mesh = Mesh::new(
+                            PrimitiveTopology::TriangleList,
+                            RenderAssetUsages::default(),
+                        );
+                        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+                        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+                        mesh.insert_indices(Indices::U32(glyph_mesh_data.indices.clone()));
+
+                        let mesh_handle = meshes.add(mesh);
+
+                        // Spawn glyph entity as child
+                        parent.spawn((
+                            GlyphMesh {
+                                char_index,
+                                line_index,
+                                character: ch,
+                            },
+                            Mesh3d(mesh_handle),
+                            default_material.clone(),
+                            Transform::from_xyz(cursor_x, cursor_y, 0.0),
+                            Visibility::default(),
+                            InheritedVisibility::default(),
+                            ViewVisibility::default(),
+                        ));
+                    }
+
+                    cursor_x += advance;
+                    char_index += 1;
+                }
+
+                // Account for newline character in char_index
+                char_index += 1;
+            }
+        });
+
+        // 6. Mark as computed
+        commands.entity(entity).insert(TextMeshGlyphsComputed);
+    }
+}
+
+/// Helper function to generate a mesh for a single character.
+///
+/// This can be used to create individual glyph meshes outside of the system,
+/// for example when you need to update a specific character's material.
+pub fn generate_glyph_mesh(
+    font: &Font,
+    character: char,
+    depth: f32,
+    subdivision: u8,
+) -> Option<Mesh> {
+    let mesh_res = font
+        .glyph_by_char(character)
+        .and_then(|g| g.with_subdivisions(subdivision).to_mesh_3d(depth));
+
+    match mesh_res {
+        Ok(glyph_mesh_data) => {
+            let mut vertices = Vec::with_capacity(glyph_mesh_data.vertices.len());
+            let mut normals = Vec::with_capacity(glyph_mesh_data.normals.len());
+
+            for v in &glyph_mesh_data.vertices {
+                vertices.push([v.x, v.y, v.z]);
+            }
+
+            for n in &glyph_mesh_data.normals {
+                normals.push([n.x, n.y, n.z]);
+            }
+
+            let mut mesh = Mesh::new(
+                PrimitiveTopology::TriangleList,
+                RenderAssetUsages::default(),
+            );
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+            mesh.insert_indices(Indices::U32(glyph_mesh_data.indices));
+
+            Some(mesh)
+        }
+        Err(_) => None,
     }
 }

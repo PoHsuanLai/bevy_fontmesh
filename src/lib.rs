@@ -55,12 +55,16 @@ mod component;
 pub mod prelude;
 mod system;
 
-pub use asset::FontMesh;
-pub use component::{JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshStyle};
+pub use asset::{FontMesh, FontMetrics, GlyphMetrics};
+pub use component::{
+    GlyphMesh, JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshGlyphs,
+    TextMeshGlyphsBundle, TextMeshStyle,
+};
+pub use system::{generate_glyph_mesh, TextMeshComputed, TextMeshGlyphsComputed};
 
 use asset::FontMeshLoader;
 use bevy::prelude::*;
-use system::update_text_meshes;
+use system::{update_glyph_meshes, update_text_meshes};
 
 /// Plugin that enables 3D text mesh generation from fonts.
 ///
@@ -91,6 +95,8 @@ impl Plugin for FontMeshPlugin {
         app.init_asset::<FontMesh>()
             .init_asset_loader::<FontMeshLoader>()
             .register_type::<TextMesh>()
-            .add_systems(Update, update_text_meshes);
+            .register_type::<TextMeshGlyphs>()
+            .register_type::<GlyphMesh>()
+            .add_systems(Update, (update_text_meshes, update_glyph_meshes));
     }
 }

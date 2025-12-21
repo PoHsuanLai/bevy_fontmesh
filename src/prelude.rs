@@ -1,5 +1,9 @@
 pub use crate::{
-    asset::FontMesh,
-    component::{JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshStyle},
+    asset::{FontMesh, FontMetrics, GlyphMetrics},
+    component::{
+        GlyphMesh, JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshGlyphs,
+        TextMeshGlyphsBundle, TextMeshStyle,
+    },
+    system::{generate_glyph_mesh, TextMeshComputed, TextMeshGlyphsComputed},
     FontMeshPlugin,
 };

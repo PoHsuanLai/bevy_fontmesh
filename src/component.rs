@@ -219,6 +219,122 @@ impl Default for TextMeshStyle {
     }
 }
 
+/// Component for generating individual 3D mesh entities for each character.
+///
+/// Unlike [`TextMesh`] which creates a single combined mesh for all characters,
+/// `TextMeshGlyphs` spawns a separate child entity for each character. This enables:
+/// - Per-character materials (different colors for syntax highlighting)
+/// - Per-character animations and effects
+/// - Efficient updates when only some characters change
+/// - Individual character picking/interaction
+///
+/// Each child entity will have a [`GlyphMesh`] component with its character index.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use bevy::prelude::*;
+/// # use bevy_fontmesh::prelude::*;
+/// # fn example(
+/// #     mut commands: Commands,
+/// #     asset_server: Res<AssetServer>,
+/// #     mut materials: ResMut<Assets<StandardMaterial>>,
+/// # ) {
+/// commands.spawn(TextMeshGlyphsBundle {
+///     text_glyphs: TextMeshGlyphs {
+///         text: "Hello".to_string(),
+///         font: asset_server.load("fonts/font.ttf"),
+///         style: TextMeshStyle::default(),
+///     },
+///     // Default material for all glyphs (can be overridden per-glyph)
+///     material: MeshMaterial3d(materials.add(StandardMaterial::default())),
+///     ..default()
+/// });
+/// # }
+/// ```
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct TextMeshGlyphs {
+    /// The text to display. Use `\n` for line breaks.
+    pub text: String,
+    /// Handle to the font asset (TTF or OTF file).
+    pub font: Handle<FontMesh>,
+    /// Visual style configuration for the glyph meshes.
+    pub style: TextMeshStyle,
+}
+
+/// Marker component for individual glyph mesh entities.
+///
+/// This component is automatically added to child entities spawned by [`TextMeshGlyphs`].
+/// It contains metadata about the glyph's position in the text.
+///
+/// # Fields
+///
+/// - `char_index`: The index of this character in the original text string
+/// - `line_index`: The line number (0-indexed) this character appears on
+/// - `character`: The actual character this glyph represents
+#[derive(Component, Reflect, Clone, Debug)]
+#[reflect(Component)]
+pub struct GlyphMesh {
+    /// Index of this character in the text string (0-indexed)
+    pub char_index: usize,
+    /// Line number this character is on (0-indexed)
+    pub line_index: usize,
+    /// The character this glyph represents
+    pub character: char,
+}
+
+/// Convenience bundle for spawning 3D text with per-character entities.
+///
+/// This bundle is similar to [`TextMeshBundle`] but uses [`TextMeshGlyphs`] instead,
+/// which spawns separate child entities for each character.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use bevy::prelude::*;
+/// # use bevy_fontmesh::prelude::*;
+/// # fn example(
+/// #     mut commands: Commands,
+/// #     asset_server: Res<AssetServer>,
+/// #     mut materials: ResMut<Assets<StandardMaterial>>,
+/// # ) {
+/// commands.spawn(TextMeshGlyphsBundle {
+///     text_glyphs: TextMeshGlyphs {
+///         text: "Code".to_string(),
+///         font: asset_server.load("fonts/font.ttf"),
+///         style: TextMeshStyle {
+///             depth: 0.1,
+///             ..default()
+///         },
+///     },
+///     material: MeshMaterial3d(materials.add(StandardMaterial {
+///         base_color: Color::WHITE,
+///         ..default()
+///     })),
+///     transform: Transform::from_xyz(0.0, 0.0, 0.0),
+///     ..default()
+/// });
+/// # }
+/// ```
+#[derive(Bundle, Default)]
+pub struct TextMeshGlyphsBundle {
+    /// The text glyphs component that drives per-character mesh generation.
+    pub text_glyphs: TextMeshGlyphs,
+    /// Default material for glyph meshes (can be overridden per-glyph).
+    pub material: MeshMaterial3d<StandardMaterial>,
+    /// Local transform of the parent entity.
+    pub transform: Transform,
+    /// Global transform (computed automatically).
+    pub global_transform: GlobalTransform,
+    /// Visibility of the entity.
+    pub visibility: Visibility,
+    /// Inherited visibility (computed automatically).
+    pub inherited_visibility: InheritedVisibility,
+    /// View visibility (computed automatically).
+    pub view_visibility: ViewVisibility,
+}
+
 /// Convenience bundle for spawning 3D text entities.
 ///
 /// This bundle includes all necessary components for rendering 3D text in Bevy:
