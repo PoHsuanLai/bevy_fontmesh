@@ -91,7 +91,3 @@ Supported Formats
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## Credits
-
-Built on [foni dtmesh](https://github.com/PoHsuanLai/fontmesh).
