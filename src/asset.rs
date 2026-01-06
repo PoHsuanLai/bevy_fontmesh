@@ -75,12 +75,15 @@ impl FontMesh {
     /// # }
     /// ```
     pub fn glyph_metrics(&self, character: char) -> Option<GlyphMetrics> {
-        let font = fontmesh::Font::from_bytes(&self.data).ok()?;
-        let glyph = font.glyph_by_char(character).ok()?;
+        let face = fontmesh::parse_font(&self.data).ok()?;
+        let advance = fontmesh::glyph_advance(&face, character)?;
+
+        // Check if glyph has outline by trying to generate a mesh
+        let has_outline = fontmesh::char_to_mesh_2d(&face, character, 1).is_ok();
 
         Some(GlyphMetrics {
-            advance: glyph.advance(),
-            has_outline: glyph.outline().is_ok(),
+            advance,
+            has_outline,
         })
     }
 
@@ -102,11 +105,11 @@ impl FontMesh {
     /// # }
     /// ```
     pub fn font_metrics(&self) -> Option<FontMetrics> {
-        let font = fontmesh::Font::from_bytes(&self.data).ok()?;
+        let face = fontmesh::parse_font(&self.data).ok()?;
 
-        let ascender = font.ascender();
-        let descender = font.descender();
-        let line_gap = font.line_gap();
+        let ascender = fontmesh::ascender(&face);
+        let descender = fontmesh::descender(&face);
+        let line_gap = fontmesh::line_gap(&face);
 
         Some(FontMetrics {
             ascender,
@@ -133,23 +136,21 @@ impl FontMesh {
     /// # }
     /// ```
     pub fn text_width(&self, text: &str) -> f32 {
-        let font = match fontmesh::Font::from_bytes(&self.data) {
+        let face = match fontmesh::parse_font(&self.data) {
             Ok(f) => f,
             Err(_) => return 0.0,
         };
 
         text.chars()
             .map(|ch| {
-                font.glyph_by_char(ch)
-                    .map(|g| g.advance())
-                    .unwrap_or_else(|_| {
-                        if ch.is_whitespace() {
-                            // Use font metrics for a proportional fallback space width
-                            (font.ascender() - font.descender()) * 0.25
-                        } else {
-                            0.0
-                        }
-                    })
+                fontmesh::glyph_advance(&face, ch).unwrap_or_else(|| {
+                    if ch.is_whitespace() {
+                        // Use font metrics for a proportional fallback space width
+                        (fontmesh::ascender(&face) - fontmesh::descender(&face)) * 0.25
+                    } else {
+                        0.0
+                    }
+                })
             })
             .sum()
     }
@@ -174,7 +175,7 @@ impl FontMesh {
     /// # }
     /// ```
     pub fn char_positions(&self, text: &str) -> Vec<(usize, f32)> {
-        let font = match fontmesh::Font::from_bytes(&self.data) {
+        let face = match fontmesh::parse_font(&self.data) {
             Ok(f) => f,
             Err(_) => return Vec::new(),
         };
@@ -183,17 +184,14 @@ impl FontMesh {
             .enumerate()
             .scan(0.0, |x, (idx, ch)| {
                 let current_x = *x;
-                *x += font
-                    .glyph_by_char(ch)
-                    .map(|g| g.advance())
-                    .unwrap_or_else(|_| {
-                        if ch.is_whitespace() {
-                            // Use font metrics for a proportional fallback space width
-                            (font.ascender() - font.descender()) * 0.25
-                        } else {
-                            0.0
-                        }
-                    });
+                *x += fontmesh::glyph_advance(&face, ch).unwrap_or_else(|| {
+                    if ch.is_whitespace() {
+                        // Use font metrics for a proportional fallback space width
+                        (fontmesh::ascender(&face) - fontmesh::descender(&face)) * 0.25
+                    } else {
+                        0.0
+                    }
+                });
                 Some((idx, current_x))
             })
             .collect()

@@ -23,7 +23,7 @@ The plugin just generates the meshes - Bevy handles everything else (materials, 
 ```toml
 [dependencies]
 bevy = "0.17"
-bevy_fontmesh = "0.1"
+bevy_fontmesh = "0.1.4"
 ```
 
 ```rust
@@ -86,7 +86,7 @@ Supported Formats
 
 | bevy_fontmesh | Bevy |
 | ------------- | ---- |
-| 0.1           | 0.17 |
+| 0.1.4         | 0.17 |
 
 ## License
 
@@ -94,4 +94,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Credits
 
-Built on [foni dtmesh](https://github.com/PoHsuanLai/fontmesh).
+Built on [fontmesh](https://github.com/PoHsuanLai/fontmesh).
