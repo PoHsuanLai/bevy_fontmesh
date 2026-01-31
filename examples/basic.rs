@@ -38,7 +38,7 @@ fn setup(
         .insert(Transform::from_xyz(-4.0, 2.0, 4.0));
 
     // Add AmbientLight
-    commands.insert_resource(AmbientLight {
+    commands.spawn(AmbientLight {
         color: Color::WHITE,
         brightness: 1000.0, // Significantly brighter to act as "environment" lighting substitute
         affects_lightmapped_meshes: true,

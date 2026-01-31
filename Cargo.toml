@@ -14,7 +14,7 @@ categories = ["graphics", "game-engines", "rendering"]
 exclude = ["assets/", "images/"]
 
 [dependencies]
-bevy = { version = "0.17", default-features = false, features = [
+bevy = { version = "0.18", default-features = false, features = [
     "bevy_asset",
     "bevy_pbr",
     "bevy_render",
@@ -23,7 +23,7 @@ fontmesh = "0.3.4"
 thiserror = "2.0"
 
 [dev-dependencies]
-bevy = { version = "0.17", default-features = false, features = [
+bevy = { version = "0.18", default-features = false, features = [
     "bevy_asset",
     "bevy_pbr",
     "bevy_render",
