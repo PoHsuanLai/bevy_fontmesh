@@ -90,4 +90,3 @@ Supported Formats
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-<<<<<<< HEAD
