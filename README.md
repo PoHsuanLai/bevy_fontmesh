@@ -85,8 +85,8 @@ Supported Formats
 
 | bevy_fontmesh | Bevy |
 | ------------- | ---- |
-| 0.1.4         | 0.17 |
-| 0.1.5         | 0.18 |
+| 0.1           | 0.17 |
+| 0.2           | 0.18 |
 
 ## License
 
