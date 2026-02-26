@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2021"
 authors = ["Po Hsuan Lai"]
 description = "Simple and focused Bevy plugin for generating 3D text meshes from fonts"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/PoHsuanLai/bevy_fontmesh"
 documentation = "https://docs.rs/bevy_fontmesh"
 homepage = "https://github.com/PoHsuanLai/bevy_fontmesh"
@@ -19,8 +19,12 @@ bevy = { version = "0.18", default-features = false, features = [
     "bevy_pbr",
     "bevy_render",
 ] }
-fontmesh = "0.3.4"
+fontmesh = "0.4.0"
 thiserror = "2.0"
+
+[[bench]]
+name = "mesh_generation"
+harness = false
 
 [dev-dependencies]
 bevy = { version = "0.18", default-features = false, features = [
@@ -35,3 +39,4 @@ bevy = { version = "0.18", default-features = false, features = [
     "x11",  # or "wayland" depending on your platform
 ] }
 rand = "0.9.2"
+criterion = { version = "0.5", features = ["html_reports"] }

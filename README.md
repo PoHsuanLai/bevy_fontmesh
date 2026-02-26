@@ -3,7 +3,7 @@
 [![CI](https://github.com/PoHsuanLai/bevy_fontmesh/actions/workflows/ci.yml/badge.svg)](https://github.com/PoHsuanLai/bevy_fontmesh/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/bevy_fontmesh.svg)](https://crates.io/crates/bevy_fontmesh)
 [![Documentation](https://docs.rs/bevy_fontmesh/badge.svg)](https://docs.rs/bevy_fontmesh)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT or Apache-2.0](https://img.shields.io/badge/License-MIT%20or%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
 A simple and focused Bevy plugin for generating 3D text meshes from fonts. Powered by [fontmesh](https://crates.io/crates/fontmesh).
 
@@ -71,6 +71,12 @@ cargo run --example per_glyph             # Per-character styling
 cargo run --release --example stress_test # Performance test
 ```
 
+## Limitations
+
+- **No kerning**: Character spacing uses advance widths only. Kerning pairs from the font are not applied.
+- **Font parsing**: The font is re-parsed from bytes on each mesh generation. For static text this is fine; if you spawn many text entities at startup, consider reusing `FontMesh` handles so the asset loader runs once.
+- **No CFF/PostScript outlines**: OpenType fonts with CFF outlines are not supported (ttf-parser limitation).
+
 ## Why another text plugin?
 
 I wanted something simple that just generates meshes and lets Bevy do the rest. No fancy features, no complex API - just font → mesh.
@@ -90,4 +96,4 @@ Supported Formats
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+Licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.
