@@ -58,8 +58,7 @@ fn generate_text_mesh(
                         .map(|v| [v.x + cursor_x, v.y + cursor_y, v.z]),
                 );
                 all_normals.extend(mesh.normals.iter().map(|n| [n.x, n.y, n.z]));
-                all_indices
-                    .extend(mesh.indices.iter().map(|i| i + index_offset));
+                all_indices.extend(mesh.indices.iter().map(|i| i + index_offset));
                 index_offset += mesh.vertices.len() as u32;
                 cursor_x += get_glyph_advance(ch, face);
             }
@@ -105,13 +104,9 @@ fn bench_word(c: &mut Criterion) {
     let mut group = c.benchmark_group("word");
 
     for word in ["Hi", "Hello", "Hello World", "The quick brown fox"] {
-        group.bench_with_input(
-            BenchmarkId::from_parameter(word),
-            word,
-            |b, text| {
-                b.iter(|| generate_text_mesh(black_box(text), 0.5, 20, black_box(&face)))
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(word), word, |b, text| {
+            b.iter(|| generate_text_mesh(black_box(text), 0.5, 20, black_box(&face)))
+        });
     }
     group.finish();
 }
@@ -147,9 +142,7 @@ fn bench_quality_levels(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(subdivisions),
             &subdivisions,
-            |b, &sub| {
-                b.iter(|| generate_text_mesh(black_box("Hello"), 0.5, sub, black_box(&face)))
-            },
+            |b, &sub| b.iter(|| generate_text_mesh(black_box("Hello"), 0.5, sub, black_box(&face))),
         );
     }
     group.finish();

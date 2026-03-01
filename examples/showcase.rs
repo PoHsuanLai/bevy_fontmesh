@@ -19,7 +19,10 @@ fn main() {
         .add_plugins(FontMeshPlugin)
         .insert_resource(ClearColor(Color::BLACK))
         .add_systems(Startup, setup)
-        .add_systems(Update, (assign_glyph_materials, animate_glyphs, orbit_camera))
+        .add_systems(
+            Update,
+            (assign_glyph_materials, animate_glyphs, orbit_camera),
+        )
         .run();
 }
 
@@ -35,7 +38,6 @@ struct OrbitCamera {
 
 #[derive(Component)]
 struct CameraLight;
-
 
 #[derive(Component)]
 struct GlyphAnimated {
@@ -193,8 +195,15 @@ fn animate_glyphs(
         // Slowly oscillate between this metal and the next (period ~6 s)
         let phase = (t * 0.5 + anim.metal_index as f32 * 1.2).sin() * 0.5 + 0.5;
         let next_index = (anim.metal_index + 1) % METAL_COLORS.len();
-        let (Color::Srgba(a), ra) = (METAL_COLORS[anim.metal_index].0, METAL_COLORS[anim.metal_index].1) else { continue };
-        let (Color::Srgba(b), rb) = (METAL_COLORS[next_index].0, METAL_COLORS[next_index].1) else { continue };
+        let (Color::Srgba(a), ra) = (
+            METAL_COLORS[anim.metal_index].0,
+            METAL_COLORS[anim.metal_index].1,
+        ) else {
+            continue;
+        };
+        let (Color::Srgba(b), rb) = (METAL_COLORS[next_index].0, METAL_COLORS[next_index].1) else {
+            continue;
+        };
 
         mat.base_color = Color::srgb(
             a.red + (b.red - a.red) * phase,
