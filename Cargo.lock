@@ -523,7 +523,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_fontmesh"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bevy",
  "criterion",
@@ -1809,6 +1809,8 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 [[package]]
 name = "fontmesh"
 version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e073e8bdbd27826016221558b663f707f7dd003267ca76b29c3256a984d722d9"
 dependencies = [
  "glam",
  "lyon_tessellation",
