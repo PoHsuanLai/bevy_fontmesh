@@ -523,7 +523,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_fontmesh"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bevy",
  "criterion",
@@ -1808,7 +1808,7 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "fontmesh"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "glam",
  "lyon_tessellation",

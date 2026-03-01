@@ -21,8 +21,8 @@ The plugin just generates the meshes - Bevy handles everything else (materials, 
 
 ```toml
 [dependencies]
-bevy = "0.17"
-bevy_fontmesh = "0.1.4"
+bevy = "0.18"
+bevy_fontmesh = "0.2.2"
 ```
 
 ```rust
@@ -69,6 +69,7 @@ cargo run --example justification         # Text alignment
 cargo run --example anchors               # All anchor points
 cargo run --example per_glyph             # Per-character styling
 cargo run --release --example stress_test # Performance test
+cargo run --release --example showcase    # Metallic "BEVY" with orbiting camera
 ```
 
 ## Limitations
