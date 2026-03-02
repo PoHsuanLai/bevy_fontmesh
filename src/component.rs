@@ -59,7 +59,7 @@ pub enum TextAnchor {
 /// # use bevy::prelude::*;
 /// # use bevy_fontmesh::prelude::*;
 /// # fn example(mut commands: Commands, asset_server: Res<AssetServer>) {
-/// commands.spawn(TextMeshBundle {
+/// commands.spawn(TextMeshBundle::<StandardMaterial> {
 ///     text_mesh: TextMesh {
 ///         text: "Hello, World!".to_string(),
 ///         font: asset_server.load("fonts/font.ttf"),
@@ -83,7 +83,7 @@ pub enum TextAnchor {
 /// # use bevy::prelude::*;
 /// # use bevy_fontmesh::prelude::*;
 /// # fn example(mut commands: Commands, asset_server: Res<AssetServer>) {
-/// commands.spawn(TextMeshBundle {
+/// commands.spawn(TextMeshBundle::<StandardMaterial> {
 ///     text_mesh: TextMesh {
 ///         text: "Line 1\nLine 2\nLine 3".to_string(),
 ///         font: asset_server.load("fonts/font.ttf"),

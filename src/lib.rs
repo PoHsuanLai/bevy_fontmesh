@@ -41,16 +41,17 @@
 //!
 //! ```no_run
 //! use bevy::prelude::*;
+//! use bevy::render::render_resource::AsBindGroup;
 //! use bevy_fontmesh::FontMeshPlugin;
 //!
+//! # #[derive(Asset, TypePath, AsBindGroup, Clone)]
+//! # struct MyCustomMaterial {}
+//! # impl Material for MyCustomMaterial {}
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
 //!     .add_plugins(FontMeshPlugin::<MyCustomMaterial>::default())
 //!     .run();
-//! # #[derive(Asset, TypePath, AsBindGroup, Clone)]
-//! # struct MyCustomMaterial {}
-//! # impl Material for MyCustomMaterial {}
 //! ```
 //!
 //! # Features
@@ -126,16 +127,17 @@ impl Plugin for SharedFontMeshPlugin {
 ///
 /// ```no_run
 /// use bevy::prelude::*;
+/// use bevy::render::render_resource::AsBindGroup;
 /// use bevy_fontmesh::FontMeshPlugin;
 ///
+/// # #[derive(Asset, TypePath, AsBindGroup, Clone)]
+/// # struct MyCustomMaterial {}
+/// # impl Material for MyCustomMaterial {}
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
 ///     .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
 ///     .add_plugins(FontMeshPlugin::<MyCustomMaterial>::default())
 ///     .run();
-/// # #[derive(Asset, TypePath, AsBindGroup, Clone)]
-/// # struct MyCustomMaterial {}
-/// # impl Material for MyCustomMaterial {}
 /// ```
 ///
 /// The plugin automatically:
