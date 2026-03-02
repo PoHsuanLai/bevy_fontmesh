@@ -21,10 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bevy 0.17 support (maintenance)
 
-## [0.1.4] - 2024
+## [0.1.4] - 2025
 
 - Per-glyph entity support via `TextMeshGlyphs`
 
-## [0.1.3] - 2024
+## [0.1.3] - 2025
 
 - Previous stable release
