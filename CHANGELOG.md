@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated to Bevy 0.18
 - Updated to fontmesh 0.3.4 (pure functions API)
 
-## [0.1.5] - 2024
+## [0.1.5] - 2025
 
 ### Changed
 - Reduced Bevy feature dependencies (only `bevy_asset`, `bevy_pbr`, `bevy_render` required)
@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-glyph entity support via `TextMeshGlyphs` and `TextMeshGlyphsBundle`
 - Per-character materials and animation support
 
-## [0.1.0] - 2024
+## [0.1.0] - 2025
 
 ### Added
 - Initial release
