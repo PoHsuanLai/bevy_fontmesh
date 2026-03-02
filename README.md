@@ -8,7 +8,7 @@
 A simple and focused Bevy plugin for generating 3D text meshes from fonts. Powered by [fontmesh](https://crates.io/crates/fontmesh).
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/5a519f0e-b836-4dce-bd1b-eb2867e1437b" controls></video>
+  <img src="images/showcase.gif" alt="bevy_fontmesh showcase" />
 </p>
 
 ## What it does

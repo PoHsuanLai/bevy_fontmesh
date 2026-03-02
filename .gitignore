@@ -5,4 +5,5 @@ GEMINI.md
 
 .DS_Store
 
-/images
+/images/*.mov
+/images/*.mp4
