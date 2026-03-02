@@ -32,7 +32,7 @@ use bevy_fontmesh::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(FontMeshPlugin)
+        .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
         .add_systems(Startup, setup)
         .run();
 }
@@ -56,6 +56,12 @@ fn setup(
         ..default()
     });
 }
+```
+
+For custom materials, add the plugin for each material type you need:
+
+```rust
+app.add_plugins(FontMeshPlugin::<MyCustomMaterial>::default())
 ```
 
 For detailed API documentation and more examples, see [docs.rs/bevy_fontmesh](https://docs.rs/bevy_fontmesh).
@@ -94,6 +100,7 @@ Supported Formats
 | ------------- | ---- |
 | 0.1           | 0.17 |
 | 0.2           | 0.18 |
+| 0.3           | 0.18 |
 
 ## License
 

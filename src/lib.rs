@@ -13,7 +13,7 @@
 //! fn main() {
 //!     App::new()
 //!         .add_plugins(DefaultPlugins)
-//!         .add_plugins(FontMeshPlugin)
+//!         .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
 //!         .add_systems(Startup, setup)
 //!         .run();
 //! }
@@ -113,7 +113,7 @@ impl Plugin for SharedFontMeshPlugin {
 ///
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugins(FontMeshPlugin)
+///     .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
 ///     .run();
 /// ```
 ///
