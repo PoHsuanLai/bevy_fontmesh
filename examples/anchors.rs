@@ -4,7 +4,7 @@ use bevy_fontmesh::{FontMeshPlugin, TextAnchor, TextMesh, TextMeshBundle, TextMe
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(FontMeshPlugin)
+        .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
         .add_systems(Startup, setup)
         .add_systems(Update, rotate_anchors)
         .run();

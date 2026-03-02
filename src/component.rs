@@ -317,12 +317,12 @@ pub struct GlyphMesh {
 /// });
 /// # }
 /// ```
-#[derive(Bundle, Default)]
-pub struct TextMeshGlyphsBundle {
+#[derive(Bundle)]
+pub struct TextMeshGlyphsBundle<M: Material = StandardMaterial> {
     /// The text glyphs component that drives per-character mesh generation.
     pub text_glyphs: TextMeshGlyphs,
     /// Default material for glyph meshes (can be overridden per-glyph).
-    pub material: MeshMaterial3d<StandardMaterial>,
+    pub material: MeshMaterial3d<M>,
     /// Local transform of the parent entity.
     pub transform: Transform,
     /// Global transform (computed automatically).
@@ -333,6 +333,20 @@ pub struct TextMeshGlyphsBundle {
     pub inherited_visibility: InheritedVisibility,
     /// View visibility (computed automatically).
     pub view_visibility: ViewVisibility,
+}
+
+impl<M: Material + Default> Default for TextMeshGlyphsBundle<M> {
+    fn default() -> Self {
+        Self {
+            text_glyphs: Default::default(),
+            material: Default::default(),
+            transform: Default::default(),
+            global_transform: Default::default(),
+            visibility: Default::default(),
+            inherited_visibility: Default::default(),
+            view_visibility: Default::default(),
+        }
+    }
 }
 
 /// Convenience bundle for spawning 3D text entities.
@@ -370,14 +384,14 @@ pub struct TextMeshGlyphsBundle {
 /// });
 /// # }
 /// ```
-#[derive(Bundle, Default)]
-pub struct TextMeshBundle {
+#[derive(Bundle)]
+pub struct TextMeshBundle<M: Material = StandardMaterial> {
     /// The text mesh component that drives mesh generation.
     pub text_mesh: TextMesh,
     /// The 3D mesh handle (automatically populated by the plugin system).
     pub mesh: Mesh3d,
     /// Material applied to the text mesh.
-    pub material: MeshMaterial3d<StandardMaterial>,
+    pub material: MeshMaterial3d<M>,
     /// Local transform of the entity.
     pub transform: Transform,
     /// Global transform (computed automatically).
@@ -388,4 +402,19 @@ pub struct TextMeshBundle {
     pub inherited_visibility: InheritedVisibility,
     /// View visibility (computed automatically).
     pub view_visibility: ViewVisibility,
+}
+
+impl<M: Material + Default> Default for TextMeshBundle<M> {
+    fn default() -> Self {
+        Self {
+            text_mesh: Default::default(),
+            mesh: Default::default(),
+            material: Default::default(),
+            transform: Default::default(),
+            global_transform: Default::default(),
+            visibility: Default::default(),
+            inherited_visibility: Default::default(),
+            view_visibility: Default::default(),
+        }
+    }
 }

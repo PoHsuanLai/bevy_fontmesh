@@ -238,13 +238,13 @@ pub fn update_text_meshes(
     }
 }
 
-type TextMeshGlyphsQuery<'w, 's> = Query<
+type TextMeshGlyphsQuery<'w, 's, M> = Query<
     'w,
     's,
     (
         Entity,
         &'static TextMeshGlyphs,
-        &'static MeshMaterial3d<StandardMaterial>,
+        &'static MeshMaterial3d<M>,
     ),
     Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>,
 >;
@@ -253,12 +253,12 @@ type TextMeshGlyphsQuery<'w, 's> = Query<
 ///
 /// This system spawns a separate child entity for each character in the text,
 /// allowing for per-character styling, animations, and interactions.
-pub fn update_glyph_meshes(
+pub fn update_glyph_meshes<M: Material>(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     font_assets: Res<Assets<FontMesh>>,
     mut font_cache: ResMut<ParsedFontCache>,
-    query: TextMeshGlyphsQuery,
+    query: TextMeshGlyphsQuery<M>,
     children_query: Query<&Children>,
     glyph_query: Query<Entity, With<GlyphMesh>>,
 ) {
