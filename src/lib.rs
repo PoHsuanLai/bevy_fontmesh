@@ -78,7 +78,9 @@ pub use component::{
     GlyphMesh, JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshGlyphs,
     TextMeshGlyphsBundle, TextMeshStyle,
 };
-pub use system::{generate_glyph_mesh, update_glyph_meshes, TextMeshComputed, TextMeshGlyphsComputed};
+pub use system::{
+    generate_glyph_mesh, update_glyph_meshes, TextMeshComputed, TextMeshGlyphsComputed,
+};
 
 use asset::FontMeshLoader;
 use bevy::prelude::*;

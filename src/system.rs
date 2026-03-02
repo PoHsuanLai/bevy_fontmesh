@@ -232,11 +232,7 @@ pub fn update_text_meshes(
 type TextMeshGlyphsQuery<'w, 's, M> = Query<
     'w,
     's,
-    (
-        Entity,
-        &'static TextMeshGlyphs,
-        &'static MeshMaterial3d<M>,
-    ),
+    (Entity, &'static TextMeshGlyphs, &'static MeshMaterial3d<M>),
     Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>,
 >;
 
