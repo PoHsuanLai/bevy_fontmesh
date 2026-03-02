@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-02
+
+### Changed - BREAKING
+
+- **Generic material support**: `FontMeshPlugin`, `TextMeshBundle`, and `TextMeshGlyphsBundle` are now generic over `M: Material` (defaulting to `StandardMaterial`). Existing code using `StandardMaterial` continues to work — just replace `FontMeshPlugin` with `FontMeshPlugin::<StandardMaterial>::default()`.
+- For per-glyph entities with a custom material type, add the plugin for that type: `app.add_plugins(FontMeshPlugin::<MyMaterial>::default())`.
+
 ## [0.2.2] - 2026-03-02
 
 ### Fixed

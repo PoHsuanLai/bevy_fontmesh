@@ -16,7 +16,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(FontMeshPlugin)
+        .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
         .insert_resource(ClearColor(Color::BLACK))
         .add_systems(Startup, setup)
         .add_systems(
@@ -65,7 +65,7 @@ fn setup(
             Camera3d::default(),
             Transform::from_xyz(0.0, 0.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
             OrbitCamera {
-                radius: 6.0,
+                radius: 12.0,
                 angle: 0.0,
                 height: 0.5,
                 speed: 0.4,
@@ -128,7 +128,7 @@ fn setup(
             font: asset_server.load("fonts/Inter-Bold.otf"),
             style: TextMeshStyle {
                 depth: 0.6,
-                subdivision: 20,
+                subdivision: 64,
                 anchor: TextAnchor::Center,
                 ..default()
             },

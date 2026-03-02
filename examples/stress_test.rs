@@ -189,7 +189,7 @@ fn rotate_camera(mut query: Query<&mut Transform, With<Camera>>, time: Res<Time>
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(FontMeshPlugin)
+        .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(ClearColor(Color::srgb(1.0, 0.7, 0.8))) // Pink background
         .insert_resource(StressTimer {

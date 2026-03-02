@@ -229,23 +229,23 @@ pub fn update_text_meshes(
     }
 }
 
-type TextMeshGlyphsQuery<'w, 's> = Query<
+type TextMeshGlyphsQuery<'w, 's, M> = Query<
     'w,
     's,
     (
         Entity,
         &'static TextMeshGlyphs,
-        &'static MeshMaterial3d<StandardMaterial>,
+        &'static MeshMaterial3d<M>,
     ),
     Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>,
 >;
 
 /// System to generate per-character mesh entities for [`TextMeshGlyphs`] components.
-pub fn update_glyph_meshes(
+pub fn update_glyph_meshes<M: Material>(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     font_assets: Res<Assets<FontMesh>>,
-    query: TextMeshGlyphsQuery,
+    query: TextMeshGlyphsQuery<M>,
     children_query: Query<&Children>,
     glyph_query: Query<Entity, With<GlyphMesh>>,
 ) {
@@ -301,13 +301,13 @@ fn despawn_existing_glyphs(
     }
 }
 
-fn spawn_glyph_children(
+fn spawn_glyph_children<M: Material>(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     entity: Entity,
     glyphs: Vec<PositionedGlyph>,
     anchor_offset: Vec3,
-    default_material: &MeshMaterial3d<StandardMaterial>,
+    default_material: &MeshMaterial3d<M>,
 ) {
     commands.entity(entity).with_children(|parent| {
         for glyph in glyphs {

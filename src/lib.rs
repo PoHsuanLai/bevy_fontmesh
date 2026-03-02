@@ -35,6 +35,24 @@
 //! }
 //! ```
 //!
+//! # Custom Materials
+//!
+//! To use a custom material type, add `FontMeshPlugin` a second time with your material:
+//!
+//! ```no_run
+//! use bevy::prelude::*;
+//! use bevy_fontmesh::FontMeshPlugin;
+//!
+//! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_plugins(FontMeshPlugin)
+//!     .add_plugins(FontMeshPlugin::<MyCustomMaterial>::default())
+//!     .run();
+//! # #[derive(Asset, TypePath, AsBindGroup, Clone)]
+//! # struct MyCustomMaterial {}
+//! # impl Material for MyCustomMaterial {}
+//! ```
+//!
 //! # Features
 //!
 //! - Generates 3D mesh geometry from TrueType fonts
@@ -60,17 +78,32 @@ pub use component::{
     GlyphMesh, JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshGlyphs,
     TextMeshGlyphsBundle, TextMeshStyle,
 };
-pub use system::{generate_glyph_mesh, TextMeshComputed, TextMeshGlyphsComputed};
+pub use system::{generate_glyph_mesh, update_glyph_meshes, TextMeshComputed, TextMeshGlyphsComputed};
 
 use asset::FontMeshLoader;
 use bevy::prelude::*;
-use system::{update_glyph_meshes, update_text_meshes};
+use std::marker::PhantomData;
+use system::update_text_meshes;
+
+/// Internal plugin that handles one-time shared setup (asset loader, reflection, text mesh system).
+/// Used by [`FontMeshPlugin`] to avoid duplicate registration when multiple material types are added.
+struct SharedFontMeshPlugin;
+
+impl Plugin for SharedFontMeshPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_asset::<FontMesh>()
+            .init_asset_loader::<FontMeshLoader>()
+            .register_type::<TextMesh>()
+            .register_type::<TextMeshGlyphs>()
+            .register_type::<GlyphMesh>()
+            .add_systems(Update, update_text_meshes);
+    }
+}
 
 /// Plugin that enables 3D text mesh generation from fonts.
 ///
-/// This plugin registers the necessary assets, loaders, and systems to automatically
-/// generate 3D mesh geometry from [`TextMesh`] components. Simply add this plugin to
-/// your Bevy app and spawn entities with [`TextMeshBundle`].
+/// Generic over the material type `M`. Defaults to [`StandardMaterial`], so existing
+/// code using `FontMeshPlugin` without a type parameter continues to work unchanged.
 ///
 /// # Example
 ///
@@ -84,19 +117,42 @@ use system::{update_glyph_meshes, update_text_meshes};
 ///     .run();
 /// ```
 ///
+/// For custom materials, add the plugin again with your material type:
+///
+/// ```no_run
+/// use bevy::prelude::*;
+/// use bevy_fontmesh::FontMeshPlugin;
+///
+/// App::new()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugins(FontMeshPlugin)
+///     .add_plugins(FontMeshPlugin::<MyCustomMaterial>::default())
+///     .run();
+/// # #[derive(Asset, TypePath, AsBindGroup, Clone)]
+/// # struct MyCustomMaterial {}
+/// # impl Material for MyCustomMaterial {}
+/// ```
+///
 /// The plugin automatically:
-/// - Registers the [`FontMesh`] asset type for loading TTF/OTF fonts
+/// - Registers the [`FontMesh`] asset type for loading TTF/OTF fonts (once, on first add)
 /// - Adds a system that generates meshes when [`TextMesh`] components are added or changed
+/// - Adds a system that generates per-glyph meshes for [`TextMeshGlyphs`] using material `M`
 /// - Enables reflection for [`TextMesh`] components for editor integration
-pub struct FontMeshPlugin;
+pub struct FontMeshPlugin<M: Material = StandardMaterial>(PhantomData<M>);
 
-impl Plugin for FontMeshPlugin {
+impl<M: Material> Default for FontMeshPlugin<M> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<M: Material> Plugin for FontMeshPlugin<M> {
     fn build(&self, app: &mut App) {
-        app.init_asset::<FontMesh>()
-            .init_asset_loader::<FontMeshLoader>()
-            .register_type::<TextMesh>()
-            .register_type::<TextMeshGlyphs>()
-            .register_type::<GlyphMesh>()
-            .add_systems(Update, (update_text_meshes, update_glyph_meshes));
+        // Shared setup (asset loader, reflection, TextMesh system) runs only once.
+        if !app.is_plugin_added::<SharedFontMeshPlugin>() {
+            app.add_plugins(SharedFontMeshPlugin);
+        }
+        // Material-specific glyph system — one per material type.
+        app.add_systems(Update, update_glyph_meshes::<M>);
     }
 }

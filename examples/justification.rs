@@ -6,7 +6,7 @@ use bevy_fontmesh::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(FontMeshPlugin)
+        .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
         .add_systems(Startup, setup)
         .add_systems(Update, rotate_text)
         .run();

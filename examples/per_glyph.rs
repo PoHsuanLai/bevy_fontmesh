@@ -9,7 +9,7 @@ use bevy_fontmesh::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(FontMeshPlugin)
+        .add_plugins(FontMeshPlugin::<StandardMaterial>::default())
         .add_systems(Startup, setup)
         .add_systems(Update, color_glyphs)
         .run();

@@ -22,7 +22,7 @@ The plugin just generates the meshes - Bevy handles everything else (materials, 
 ```toml
 [dependencies]
 bevy = "0.18"
-bevy_fontmesh = "0.2.2"
+bevy_fontmesh = "0.3.0"
 ```
 
 ```rust
