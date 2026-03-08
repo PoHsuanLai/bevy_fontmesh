@@ -80,16 +80,15 @@ pub use component::{
     TextMeshGlyphsBundle, TextMeshStyle,
 };
 pub use system::{
-    generate_glyph_mesh, update_glyph_meshes, ParsedFontCache, TextMeshComputed,
-    TextMeshGlyphsComputed,
+    generate_glyph_mesh, update_glyph_meshes, TextMeshComputed, TextMeshGlyphsComputed,
 };
 
 use asset::FontMeshLoader;
 use bevy::prelude::*;
 use std::marker::PhantomData;
-use system::{cleanup_font_cache, update_text_meshes};
+use system::update_text_meshes;
 
-/// Internal plugin that handles one-time shared setup (asset loader, cache, reflection, text mesh system).
+/// Internal plugin that handles one-time shared setup (asset loader, reflection, text mesh system).
 /// Used by [`FontMeshPlugin`] to avoid duplicate registration when multiple material types are added.
 struct SharedFontMeshPlugin;
 
@@ -97,12 +96,10 @@ impl Plugin for SharedFontMeshPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<FontMesh>()
             .init_asset_loader::<FontMeshLoader>()
-            .init_resource::<ParsedFontCache>()
             .register_type::<TextMesh>()
             .register_type::<TextMeshGlyphs>()
             .register_type::<GlyphMesh>()
-            .add_systems(Update, update_text_meshes)
-            .add_systems(PostUpdate, cleanup_font_cache);
+            .add_systems(Update, update_text_meshes);
     }
 }
 
@@ -155,7 +152,7 @@ impl<M: Material> Default for FontMeshPlugin<M> {
 
 impl<M: Material> Plugin for FontMeshPlugin<M> {
     fn build(&self, app: &mut App) {
-        // Shared setup (asset loader, cache, reflection, TextMesh system) runs only once.
+        // Shared setup (asset loader, reflection, TextMesh system) runs only once.
         if !app.is_plugin_added::<SharedFontMeshPlugin>() {
             app.add_plugins(SharedFontMeshPlugin);
         }

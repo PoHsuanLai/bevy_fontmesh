@@ -4,33 +4,25 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
-use fontmesh::Font;
-use std::collections::HashMap;
-use std::sync::Arc;
 
-/// Helper function to calculate the width of a line of text
+// ── Font helpers ──────────────────────────────────────────────────────────────
+
 #[inline]
-fn calculate_line_width(line: &str, font: &Font) -> f32 {
-    line.chars().map(|ch| get_glyph_advance(ch, font)).sum()
+fn get_glyph_advance(ch: char, face: &fontmesh::Face) -> f32 {
+    fontmesh::glyph_advance(face, ch).unwrap_or_else(|| {
+        if ch.is_whitespace() {
+            (fontmesh::ascender(face) - fontmesh::descender(face)) * 0.25
+        } else {
+            0.0
+        }
+    })
 }
 
-/// Helper function to get the advance width for a character
 #[inline]
-fn get_glyph_advance(ch: char, font: &Font) -> f32 {
-    font.glyph_by_char(ch)
-        .map(|g| g.advance())
-        .unwrap_or_else(|_| {
-            if ch.is_whitespace() {
-                // Use font metrics for a proportional fallback space width
-                // Typically ~25% of the font height is a good space width
-                (font.ascender() - font.descender()) * 0.25
-            } else {
-                0.0
-            }
-        })
+fn calculate_line_width(line: &str, face: &fontmesh::Face) -> f32 {
+    line.chars().map(|ch| get_glyph_advance(ch, face)).sum()
 }
 
-/// Helper function to calculate the X offset based on text justification
 #[inline]
 fn calculate_justification_offset(justify: JustifyText, line_width: f32) -> f32 {
     match justify {
@@ -40,7 +32,6 @@ fn calculate_justification_offset(justify: JustifyText, line_width: f32) -> f32 
     }
 }
 
-/// Helper function to calculate anchor offset for text positioning
 fn calculate_anchor_offset(anchor: TextAnchor, min_bound: Vec3, max_bound: Vec3) -> Vec3 {
     let size = max_bound - min_bound;
     let center = min_bound + size * 0.5;
@@ -65,7 +56,14 @@ fn calculate_anchor_offset(anchor: TextAnchor, min_bound: Vec3, max_bound: Vec3)
     }
 }
 
-/// Helper function to create a Bevy mesh from vertex/normal/index data
+// ── Mesh helpers ──────────────────────────────────────────────────────────────
+
+fn fontmesh_to_bevy(mesh_data: &fontmesh::types::Mesh3D) -> Mesh {
+    let vertices: Vec<[f32; 3]> = mesh_data.vertices.iter().map(|v| [v.x, v.y, v.z]).collect();
+    let normals: Vec<[f32; 3]> = mesh_data.normals.iter().map(|n| [n.x, n.y, n.z]).collect();
+    create_mesh_from_data(vertices, normals, mesh_data.indices.clone())
+}
+
 fn create_mesh_from_data(
     vertices: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
@@ -81,52 +79,104 @@ fn create_mesh_from_data(
     mesh
 }
 
-/// Cached font entry containing owned data and parsed font
-type CachedFont = (Arc<Vec<u8>>, Arc<Font<'static>>);
+// ── Glyph layout ─────────────────────────────────────────────────────────────
 
-/// Cache for parsed font data to avoid re-parsing every frame.
-///
-/// This resource stores owned font data (as `Vec<u8>`) and parsed `Font` instances
-/// indexed by their asset ID, allowing multiple entities to share the same parsed
-/// font data without reparsing from bytes every frame.
-#[derive(Resource, Default)]
-pub struct ParsedFontCache {
-    fonts: HashMap<AssetId<FontMesh>, CachedFont>,
+/// A single laid-out glyph ready to be turned into a mesh or child entity.
+struct PositionedGlyph {
+    char_index: usize,
+    line_index: usize,
+    character: char,
+    /// Position of this glyph relative to the text root (before anchor offset).
+    position: Vec2,
+    mesh_data: fontmesh::types::Mesh3D,
 }
 
-impl ParsedFontCache {
-    /// Get or parse a font from the cache.
-    ///
-    /// If the font is already cached, returns a clone of the Arc.
-    /// Otherwise, clones the font data, parses it, and caches both for future use.
-    pub fn get_or_parse(
-        &mut self,
-        id: AssetId<FontMesh>,
-        data: &[u8],
-    ) -> Option<Arc<Font<'static>>> {
-        if let Some((_, font)) = self.fonts.get(&id) {
-            return Some(Arc::clone(font));
+/// Lay out all glyphs for `text` using the given face and style settings.
+/// Returns the list of positioned glyphs and the overall bounding box.
+fn layout_glyphs(
+    text: &str,
+    face: &fontmesh::Face,
+    depth: f32,
+    subdivision: u8,
+    justify: JustifyText,
+) -> (Vec<PositionedGlyph>, Vec3, Vec3) {
+    let line_height =
+        fontmesh::ascender(face) - fontmesh::descender(face) + fontmesh::line_gap(face);
+    let lines: Vec<&str> = text.split('\n').collect();
+
+    let mut glyphs = Vec::new();
+    let mut min_bound = Vec3::splat(f32::MAX);
+    let mut max_bound = Vec3::splat(f32::MIN);
+    let mut char_index = 0;
+
+    for (line_idx, line) in lines.iter().enumerate() {
+        let line_width = calculate_line_width(line, face);
+        let mut cursor_x = calculate_justification_offset(justify, line_width);
+        let cursor_y = -(line_idx as f32) * line_height;
+
+        for ch in line.chars() {
+            let advance = get_glyph_advance(ch, face);
+
+            if ch.is_whitespace() {
+                cursor_x += advance;
+                char_index += 1;
+                continue;
+            }
+
+            if let Ok(mesh_data) = fontmesh::char_to_mesh_3d(face, ch, depth, subdivision) {
+                for v in &mesh_data.vertices {
+                    let pos = Vec3::new(v.x + cursor_x, v.y + cursor_y, v.z);
+                    min_bound = min_bound.min(pos);
+                    max_bound = max_bound.max(pos);
+                }
+
+                glyphs.push(PositionedGlyph {
+                    char_index,
+                    line_index: line_idx,
+                    character: ch,
+                    position: Vec2::new(cursor_x, cursor_y),
+                    mesh_data,
+                });
+            }
+
+            cursor_x += advance;
+            char_index += 1;
         }
 
-        // Clone data to get owned bytes, then leak it to get 'static lifetime
-        let owned_data = Arc::new(data.to_vec());
-        let static_slice: &'static [u8] =
-            unsafe { std::slice::from_raw_parts(owned_data.as_ptr(), owned_data.len()) };
-
-        // Parse and cache the font
-        let font = Font::from_bytes(static_slice).ok()?;
-        let font_arc = Arc::new(font);
-        self.fonts.insert(id, (owned_data, Arc::clone(&font_arc)));
-        Some(font_arc)
+        char_index += 1; // newline
     }
 
-    /// Clear cached fonts that are no longer loaded in the asset server.
-    ///
-    /// This prevents memory leaks when fonts are unloaded.
-    pub fn cleanup(&mut self, font_assets: &Assets<FontMesh>) {
-        self.fonts.retain(|id, _| font_assets.contains(*id));
-    }
+    (glyphs, min_bound, max_bound)
 }
+
+/// Combines positioned glyphs into a single Bevy mesh with anchor offset applied.
+fn combine_glyph_meshes(glyphs: Vec<PositionedGlyph>, anchor_offset: Vec3) -> Mesh {
+    let mut all_vertices: Vec<[f32; 3]> = Vec::new();
+    let mut all_normals: Vec<[f32; 3]> = Vec::new();
+    let mut all_indices: Vec<u32> = Vec::new();
+    let mut index_offset = 0u32;
+
+    for glyph in glyphs {
+        let ox = glyph.position.x + anchor_offset.x;
+        let oy = glyph.position.y + anchor_offset.y;
+        let oz = anchor_offset.z;
+
+        all_vertices.extend(
+            glyph
+                .mesh_data
+                .vertices
+                .iter()
+                .map(|v| [v.x + ox, v.y + oy, v.z + oz]),
+        );
+        all_normals.extend(glyph.mesh_data.normals.iter().map(|n| [n.x, n.y, n.z]));
+        all_indices.extend(glyph.mesh_data.indices.iter().map(|i| i + index_offset));
+        index_offset += glyph.mesh_data.vertices.len() as u32;
+    }
+
+    create_mesh_from_data(all_vertices, all_normals, all_indices)
+}
+
+// ── Marker components ─────────────────────────────────────────────────────────
 
 /// Marker component indicating that a [`TextMesh`] has been processed.
 #[derive(Component)]
@@ -135,6 +185,8 @@ pub struct TextMeshComputed;
 /// Marker component indicating that a [`TextMeshGlyphs`] has been processed.
 #[derive(Component)]
 pub struct TextMeshGlyphsComputed;
+
+// ── Systems ───────────────────────────────────────────────────────────────────
 
 type TextMeshQuery<'w, 's> = Query<
     'w,
@@ -147,93 +199,32 @@ pub fn update_text_meshes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     font_assets: Res<Assets<FontMesh>>,
-    mut font_cache: ResMut<ParsedFontCache>,
     mut query: TextMeshQuery,
 ) {
     for (entity, text_mesh, mut mesh_handle) in query.iter_mut() {
-        // 1. Try to get the font data
         let Some(font_asset) = font_assets.get(&text_mesh.font) else {
-            // Font not loaded yet, skip this frame
+            continue;
+        };
+        let Ok(face) = fontmesh::Face::parse(&font_asset.data, 0) else {
             continue;
         };
 
-        // 2. Get or parse font from cache
-        let Some(font) = font_cache.get_or_parse(text_mesh.font.id(), &font_asset.data) else {
-            // Failed to parse font, skip this entity
-            continue;
+        let (glyphs, min_bound, max_bound) = layout_glyphs(
+            &text_mesh.text,
+            &face,
+            text_mesh.style.depth,
+            text_mesh.style.subdivision,
+            text_mesh.style.justify,
+        );
+
+        let anchor_offset = if !glyphs.is_empty() {
+            calculate_anchor_offset(text_mesh.style.anchor, min_bound, max_bound)
+        } else {
+            Vec3::ZERO
         };
 
-        // 3. Generate combined mesh
-        let mut all_vertices = Vec::new();
-        let mut all_normals = Vec::new();
-        let mut all_indices = Vec::new();
-
-        let mut cursor = Vec3::ZERO;
-        let mut index_offset = 0;
-
-        let line_height = font.ascender() - font.descender() + font.line_gap();
-
-        // Bounds tracking
-        let mut min_bound = Vec3::splat(f32::MAX);
-        let mut max_bound = Vec3::splat(f32::MIN);
-
-        // Split text into lines for justification
-        for line in text_mesh.text.split('\n') {
-            // Calculate line width and X offset based on justification
-            let line_width = calculate_line_width(line, &font);
-            cursor.x = calculate_justification_offset(text_mesh.style.justify, line_width);
-
-            // Generate mesh for line
-            for ch in line.chars() {
-                if ch.is_whitespace() {
-                    cursor.x += get_glyph_advance(ch, &font);
-                    continue;
-                }
-
-                let mesh_res = font.glyph_by_char(ch).and_then(|g| {
-                    g.with_subdivisions(text_mesh.style.subdivision)
-                        .to_mesh_3d(text_mesh.style.depth)
-                });
-
-                if let Ok(mesh) = mesh_res {
-                    // Extend vertices and update bounds
-                    all_vertices.extend(mesh.vertices.iter().map(|v| {
-                        let pos = Vec3::new(v.x + cursor.x, v.y + cursor.y, v.z);
-                        min_bound = min_bound.min(pos);
-                        max_bound = max_bound.max(pos);
-                        [pos.x, pos.y, pos.z]
-                    }));
-
-                    // Extend normals
-                    all_normals.extend(mesh.normals.iter().map(|n| [n.x, n.y, n.z]));
-
-                    // Extend indices with offset
-                    all_indices.extend(mesh.indices.iter().map(|i| i + index_offset));
-
-                    index_offset += mesh.vertices.len() as u32;
-                    cursor.x += get_glyph_advance(ch, &font);
-                }
-            }
-
-            // Move to next line
-            cursor.y -= line_height;
-        }
-
-        // 4. Apply Anchor Offset
-        if !all_vertices.is_empty() {
-            let offset = calculate_anchor_offset(text_mesh.style.anchor, min_bound, max_bound);
-            all_vertices.iter_mut().for_each(|v| {
-                v[0] += offset.x;
-                v[1] += offset.y;
-                v[2] += offset.z;
-            });
-        }
-
-        // 5. Create and assign Bevy Mesh
-        let new_mesh = create_mesh_from_data(all_vertices, all_normals, all_indices);
-        mesh_handle.0 = meshes.add(new_mesh);
-
-        // 7. Mark as computed
+        let combined_mesh = combine_glyph_meshes(glyphs, anchor_offset);
+        mesh_handle.0 = meshes.add(combined_mesh);
         commands.entity(entity).insert(TextMeshComputed);
     }
 }
@@ -246,162 +237,107 @@ type TextMeshGlyphsQuery<'w, 's, M> = Query<
 >;
 
 /// System to generate per-character mesh entities for [`TextMeshGlyphs`] components.
-///
-/// This system spawns a separate child entity for each character in the text,
-/// allowing for per-character styling, animations, and interactions.
 pub fn update_glyph_meshes<M: Material>(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     font_assets: Res<Assets<FontMesh>>,
-    mut font_cache: ResMut<ParsedFontCache>,
     query: TextMeshGlyphsQuery<M>,
     children_query: Query<&Children>,
     glyph_query: Query<Entity, With<GlyphMesh>>,
 ) {
     for (entity, text_glyphs, default_material) in query.iter() {
-        // 1. Try to get the font data
         let Some(font_asset) = font_assets.get(&text_glyphs.font) else {
-            // Font not loaded yet, skip this frame
+            continue;
+        };
+        let Ok(face) = fontmesh::Face::parse(&font_asset.data, 0) else {
             continue;
         };
 
-        // 2. Get or parse font from cache
-        let Some(font) = font_cache.get_or_parse(text_glyphs.font.id(), &font_asset.data) else {
-            // Failed to parse font, skip this entity
-            continue;
+        despawn_existing_glyphs(&mut commands, entity, &children_query, &glyph_query);
+
+        let (glyphs, min_bound, max_bound) = layout_glyphs(
+            &text_glyphs.text,
+            &face,
+            text_glyphs.style.depth,
+            text_glyphs.style.subdivision,
+            text_glyphs.style.justify,
+        );
+
+        let anchor_offset = if !glyphs.is_empty() {
+            calculate_anchor_offset(text_glyphs.style.anchor, min_bound, max_bound)
+        } else {
+            Vec3::ZERO
         };
 
-        // 3. Despawn existing glyph children
-        if let Ok(children) = children_query.get(entity) {
-            for child in children.iter() {
-                if glyph_query.contains(child) {
-                    commands.entity(child).despawn();
-                }
-            }
-        }
+        spawn_glyph_children(
+            &mut commands,
+            &mut meshes,
+            entity,
+            glyphs,
+            anchor_offset,
+            default_material,
+        );
 
-        // 4. Calculate line widths for justification
-        let line_height = font.ascender() - font.descender() + font.line_gap();
-        let lines: Vec<&str> = text_glyphs.text.split('\n').collect();
-
-        let line_widths: Vec<f32> = lines
-            .iter()
-            .map(|line| calculate_line_width(line, &font))
-            .collect();
-
-        // 5. Spawn glyph entities
-        let mut char_index = 0;
-
-        commands.entity(entity).with_children(|parent| {
-            for (line_index, line) in lines.iter().enumerate() {
-                let line_width = line_widths[line_index];
-                let mut cursor_x =
-                    calculate_justification_offset(text_glyphs.style.justify, line_width);
-                let cursor_y = -(line_index as f32) * line_height;
-
-                for ch in line.chars() {
-                    let advance = get_glyph_advance(ch, &font);
-
-                    // Skip whitespace but still count it
-                    if ch.is_whitespace() {
-                        cursor_x += advance;
-                        char_index += 1;
-                        continue;
-                    }
-
-                    // Generate mesh for this character
-                    let mesh_res = font.glyph_by_char(ch).and_then(|g| {
-                        g.with_subdivisions(text_glyphs.style.subdivision)
-                            .to_mesh_3d(text_glyphs.style.depth)
-                    });
-
-                    if let Ok(glyph_mesh_data) = mesh_res {
-                        let vertices: Vec<_> = glyph_mesh_data
-                            .vertices
-                            .iter()
-                            .map(|v| [v.x, v.y, v.z])
-                            .collect();
-
-                        let normals: Vec<_> = glyph_mesh_data
-                            .normals
-                            .iter()
-                            .map(|n| [n.x, n.y, n.z])
-                            .collect();
-
-                        let mesh = create_mesh_from_data(
-                            vertices,
-                            normals,
-                            glyph_mesh_data.indices.clone(),
-                        );
-                        let mesh_handle = meshes.add(mesh);
-
-                        // Spawn glyph entity as child
-                        parent.spawn((
-                            GlyphMesh {
-                                char_index,
-                                line_index,
-                                character: ch,
-                            },
-                            Mesh3d(mesh_handle),
-                            default_material.clone(),
-                            Transform::from_xyz(cursor_x, cursor_y, 0.0),
-                            Visibility::default(),
-                            InheritedVisibility::default(),
-                            ViewVisibility::default(),
-                        ));
-                    }
-
-                    cursor_x += advance;
-                    char_index += 1;
-                }
-
-                // Account for newline character in char_index
-                char_index += 1;
-            }
-        });
-
-        // 6. Mark as computed
         commands.entity(entity).insert(TextMeshGlyphsComputed);
     }
 }
 
-/// System to cleanup the font cache, removing fonts that are no longer loaded.
-///
-/// This runs in `PostUpdate` to prevent memory leaks from unloaded fonts.
-pub fn cleanup_font_cache(
-    mut font_cache: ResMut<ParsedFontCache>,
-    font_assets: Res<Assets<FontMesh>>,
+fn despawn_existing_glyphs(
+    commands: &mut Commands,
+    entity: Entity,
+    children_query: &Query<&Children>,
+    glyph_query: &Query<Entity, With<GlyphMesh>>,
 ) {
-    font_cache.cleanup(&font_assets);
+    if let Ok(children) = children_query.get(entity) {
+        for child in children.iter() {
+            if glyph_query.contains(child) {
+                commands.entity(child).despawn();
+            }
+        }
+    }
 }
 
-/// Helper function to generate a mesh for a single character.
-///
-/// This can be used to create individual glyph meshes outside of the system,
-/// for example when you need to update a specific character's material.
+fn spawn_glyph_children<M: Material>(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    entity: Entity,
+    glyphs: Vec<PositionedGlyph>,
+    anchor_offset: Vec3,
+    default_material: &MeshMaterial3d<M>,
+) {
+    commands.entity(entity).with_children(|parent| {
+        for glyph in glyphs {
+            let mesh_handle = meshes.add(fontmesh_to_bevy(&glyph.mesh_data));
+            parent.spawn((
+                GlyphMesh {
+                    char_index: glyph.char_index,
+                    line_index: glyph.line_index,
+                    character: glyph.character,
+                },
+                Mesh3d(mesh_handle),
+                default_material.clone(),
+                Transform::from_xyz(
+                    glyph.position.x + anchor_offset.x,
+                    glyph.position.y + anchor_offset.y,
+                    anchor_offset.z,
+                ),
+                Visibility::default(),
+                InheritedVisibility::default(),
+                ViewVisibility::default(),
+            ));
+        }
+    });
+}
+
+/// Generate a Bevy mesh for a single character. Useful for manual glyph updates.
 pub fn generate_glyph_mesh(
-    font: &Font,
+    face: &fontmesh::Face,
     character: char,
     depth: f32,
     subdivision: u8,
 ) -> Option<Mesh> {
-    let mesh_res = font
-        .glyph_by_char(character)
-        .and_then(|g| g.with_subdivisions(subdivision).to_mesh_3d(depth));
-
-    mesh_res.ok().map(|glyph_mesh_data| {
-        let vertices: Vec<_> = glyph_mesh_data
-            .vertices
-            .iter()
-            .map(|v| [v.x, v.y, v.z])
-            .collect();
-
-        let normals: Vec<_> = glyph_mesh_data
-            .normals
-            .iter()
-            .map(|n| [n.x, n.y, n.z])
-            .collect();
-
-        create_mesh_from_data(vertices, normals, glyph_mesh_data.indices)
-    })
+    fontmesh::char_to_mesh_3d(face, character, depth, subdivision)
+        .ok()
+        .as_ref()
+        .map(fontmesh_to_bevy)
 }
