@@ -76,11 +76,12 @@ mod system;
 
 pub use asset::{FontMesh, FontMetrics, GlyphMetrics};
 pub use component::{
-    GlyphMesh, JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshGlyphs,
-    TextMeshGlyphsBundle, TextMeshStyle,
+    GlyphMesh, JustifyText, ScreenSize, ScreenSizeCamera, TextAnchor, TextMesh, TextMeshBundle,
+    TextMeshGlyphs, TextMeshGlyphsBundle, TextMeshStyle,
 };
 pub use system::{
-    generate_glyph_mesh, update_glyph_meshes, TextMeshComputed, TextMeshGlyphsComputed,
+    generate_glyph_mesh, scale_screen_size, update_glyph_meshes, TextMeshComputed,
+    TextMeshGlyphsComputed,
 };
 
 use asset::FontMeshLoader;
@@ -99,7 +100,14 @@ impl Plugin for SharedFontMeshPlugin {
             .register_type::<TextMesh>()
             .register_type::<TextMeshGlyphs>()
             .register_type::<GlyphMesh>()
-            .add_systems(Update, update_text_meshes);
+            .register_type::<ScreenSize>()
+            .register_type::<ScreenSizeCamera>()
+            .add_systems(Update, update_text_meshes)
+            // Run after Bevy's transform propagation so we measure
+            // GlobalTransforms from the same frame, but write back to
+            // local Transform — propagation will pick up the change on
+            // the next PostUpdate.
+            .add_systems(PostUpdate, scale_screen_size);
     }
 }
 

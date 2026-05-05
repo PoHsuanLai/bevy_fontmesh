@@ -1,4 +1,6 @@
-use crate::component::{GlyphMesh, JustifyText, TextAnchor, TextMesh, TextMeshGlyphs};
+use crate::component::{
+    GlyphMesh, JustifyText, ScreenSize, ScreenSizeCamera, TextAnchor, TextMesh, TextMeshGlyphs,
+};
 use crate::FontMesh;
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
@@ -340,4 +342,72 @@ pub fn generate_glyph_mesh(
         .ok()
         .as_ref()
         .map(fontmesh_to_bevy)
+}
+
+// ── ScreenSize: keep text at a target on-screen pixel height ─────────────────
+
+/// For each entity with [`ScreenSize`], rewrite its `Transform.scale` so
+/// that one line of text at unit scale covers `pixel_height` pixels of
+/// the active camera's logical target.
+///
+/// Picks a camera by preference: any with [`ScreenSizeCamera`] if such a
+/// camera exists; otherwise the first camera the query returns. For a
+/// perspective camera, world-per-pixel is measured at the entity's
+/// world-space depth from the camera.
+pub fn scale_screen_size(
+    cam_marked: Query<(&Camera, &GlobalTransform, &Projection), With<ScreenSizeCamera>>,
+    cam_any: Query<(&Camera, &GlobalTransform, &Projection), Without<ScreenSizeCamera>>,
+    mut targets: Query<(&ScreenSize, &GlobalTransform, &mut Transform)>,
+) {
+    let (camera, cam_xform, projection) = match cam_marked.single() {
+        Ok(c) => c,
+        Err(_) => match cam_any.iter().next() {
+            Some(c) => c,
+            None => return,
+        },
+    };
+    let Some(target_size) = camera.logical_target_size() else {
+        return;
+    };
+    let target_h = target_size.y.max(1.0);
+
+    for (size, gxform, mut transform) in targets.iter_mut() {
+        let world_per_px = match projection {
+            Projection::Orthographic(ortho) => orthographic_world_per_px(ortho, target_h),
+            Projection::Perspective(persp) => {
+                perspective_world_per_px(persp, cam_xform, gxform, target_h)
+            }
+            _ => continue,
+        };
+        let s = size.pixel_height * world_per_px;
+        if s.is_finite() && s > 0.0 {
+            transform.scale = Vec3::splat(s);
+        }
+    }
+}
+
+#[inline]
+fn orthographic_world_per_px(ortho: &OrthographicProjection, target_h: f32) -> f32 {
+    let viewport_h = match ortho.scaling_mode {
+        bevy::camera::ScalingMode::FixedVertical { viewport_height } => viewport_height,
+        bevy::camera::ScalingMode::FixedHorizontal { viewport_width } => {
+            let aspect = ortho.area.width() / ortho.area.height().max(f32::EPSILON);
+            viewport_width / aspect.max(f32::EPSILON)
+        }
+        bevy::camera::ScalingMode::WindowSize => ortho.area.height(),
+        _ => ortho.area.height(),
+    };
+    viewport_h / target_h
+}
+
+#[inline]
+fn perspective_world_per_px(
+    persp: &PerspectiveProjection,
+    cam_xform: &GlobalTransform,
+    target_xform: &GlobalTransform,
+    target_h: f32,
+) -> f32 {
+    let depth = (target_xform.translation() - cam_xform.translation()).length();
+    let visible_h = 2.0 * depth * (persp.fov * 0.5).tan();
+    visible_h / target_h
 }
