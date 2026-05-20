@@ -1969,7 +1969,7 @@ dependencies = [
 [[package]]
 name = "fontmesh"
 version = "0.5.0-dev"
-source = "git+https://github.com/PoHsuanLai/fontmesh?branch=skrifa#68bd32018eb14197239be469a8323375b3267a32"
+source = "git+https://github.com/PoHsuanLai/fontmesh?branch=main#5072cce1aed392f446d433b29f527d7127b08937"
 dependencies = [
  "glam",
  "lyon_tessellation",
