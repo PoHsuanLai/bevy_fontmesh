@@ -33,6 +33,8 @@ fn setup(
     let base_material = MeshMaterial3d(materials.add(StandardMaterial {
         base_color: Color::WHITE,
         perceptual_roughness: 0.1,
+        double_sided: true,
+        cull_mode: None,
         ..default()
     }));
 

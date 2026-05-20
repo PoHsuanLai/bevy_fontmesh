@@ -62,6 +62,9 @@ fn test_empty_text_width() {
     let bytes = font_bytes();
     let font = parse_font(&bytes).expect("parse_font");
 
-    let width: f32 = "".chars().map(|ch| glyph_advance(&font, ch).unwrap_or(0.0)).sum();
+    let width: f32 = ""
+        .chars()
+        .map(|ch| glyph_advance(&font, ch).unwrap_or(0.0))
+        .sum();
     assert_eq!(width, 0.0, "Empty text should have 0 width");
 }

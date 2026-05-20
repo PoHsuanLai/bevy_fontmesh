@@ -70,8 +70,8 @@ pub use component::{
     TextMeshGlyphs, TextMeshGlyphsBundle, TextMeshStyle,
 };
 pub use system::{
-    on_font_asset_event, scale_screen_size, update_glyph_meshes, FontMeshRegistry,
-    GlyphMeshCache, TextMeshComputed, TextMeshGlyphsComputed,
+    on_font_asset_event, scale_screen_size, update_glyph_meshes, FontMeshRegistry, GlyphMeshCache,
+    TextMeshComputed, TextMeshGlyphsComputed,
 };
 
 use bevy::prelude::*;

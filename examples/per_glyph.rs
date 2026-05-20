@@ -57,6 +57,8 @@ fn setup(
             base_color: Color::WHITE,
             metallic: 0.5,
             perceptual_roughness: 0.4,
+            double_sided: true,
+            cull_mode: None,
             ..default()
         })),
         transform: Transform::from_xyz(-2.0, 1.0, 0.0),
@@ -79,6 +81,8 @@ fn color_glyphs(
             base_color: color,
             metallic: 0.7,
             perceptual_roughness: 0.3,
+            double_sided: true,
+            cull_mode: None,
             ..default()
         });
 

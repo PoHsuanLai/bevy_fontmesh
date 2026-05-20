@@ -201,9 +201,7 @@ fn shape_text(
     // alignment is applied per-line within whatever the layout produced.
     buffer.set_size(font_system, None, None);
 
-    let attrs = Attrs::new()
-        .family(Family::Name(family))
-        .metrics(metrics);
+    let attrs = Attrs::new().family(Family::Name(family)).metrics(metrics);
     let cosmic_align = Some(match justify {
         JustifyText::Left => cosmic_text::Align::Left,
         JustifyText::Center => cosmic_text::Align::Center,
@@ -279,10 +277,7 @@ fn calculate_anchor_offset(anchor: TextAnchor, min_bound: Vec3, max_bound: Vec3)
 
 // ── Combined-mesh builder (single Mesh3d output) ─────────────────────────────
 
-fn combine_shaped_meshes(
-    glyphs: &[(ShapedGlyph, fontmesh::Mesh3D)],
-    anchor_offset: Vec3,
-) -> Mesh {
+fn combine_shaped_meshes(glyphs: &[(ShapedGlyph, fontmesh::Mesh3D)], anchor_offset: Vec3) -> Mesh {
     let mut all_vertices: Vec<[f32; 3]> = Vec::new();
     let mut all_normals: Vec<[f32; 3]> = Vec::new();
     let mut all_indices: Vec<u32> = Vec::new();
@@ -360,8 +355,7 @@ pub fn update_text_meshes(
 
         // Generate per-glyph meshes (single combined output, so we don't go
         // through GlyphMeshCache here — every TextMesh is one Mesh3d).
-        let mut per_glyph: Vec<(ShapedGlyph, fontmesh::Mesh3D)> =
-            Vec::with_capacity(shaped.len());
+        let mut per_glyph: Vec<(ShapedGlyph, fontmesh::Mesh3D)> = Vec::with_capacity(shaped.len());
         let mut min_bound = Vec3::splat(f32::MAX);
         let mut max_bound = Vec3::splat(f32::MIN);
         for g in shaped {
@@ -401,6 +395,7 @@ type TextMeshGlyphsQuery<'w, 's, M> = Query<
 >;
 
 /// System to generate per-character mesh entities for [`TextMeshGlyphs`].
+#[allow(clippy::too_many_arguments)]
 pub fn update_glyph_meshes<M: Material>(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -413,7 +408,8 @@ pub fn update_glyph_meshes<M: Material>(
     glyph_query: Query<Entity, With<GlyphMesh>>,
 ) {
     for (entity, text_glyphs, default_material) in query.iter() {
-        let family = match registry.ensure_registered(&text_glyphs.font, &fonts, &mut font_system.0) {
+        let family = match registry.ensure_registered(&text_glyphs.font, &fonts, &mut font_system.0)
+        {
             Some(r) => r.family.clone(),
             None => continue,
         };
@@ -567,4 +563,3 @@ fn perspective_world_per_px(
     let visible_h = 2.0 * depth * (persp.fov * 0.5).tan();
     visible_h / target_h
 }
-

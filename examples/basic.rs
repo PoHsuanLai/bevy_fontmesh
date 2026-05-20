@@ -60,6 +60,8 @@ fn setup(
             metallic: 0.8,             // Slightly less metallic to show some base color
             perceptual_roughness: 0.3, // Rougher to catch more light highlights
             reflectance: 0.8,
+            double_sided: true,
+            cull_mode: None,
             ..default()
         })),
         transform: Transform::from_xyz(-2.5, 0.0, 0.0),
