@@ -1,9 +1,10 @@
 //! A Bevy plugin for generating 3D text meshes from fonts.
 //!
-//! In 0.4 the plugin uses Bevy's standard [`bevy::text::Font`] asset for font
-//! loading and `cosmic-text` for shaping, so the same `Handle<Font>` you use
-//! for 2D UI text also drives 3D text meshes. This brings real text shaping
-//! (kerning, ligatures, BiDi, line wrapping) and full OpenType/CFF support.
+//! Starting with 0.4 the plugin uses Bevy's standard [`bevy::text::Font`] asset
+//! for font loading and `cosmic-text` for shaping, so the same `Handle<Font>`
+//! you use for 2D UI text also drives 3D text meshes. This brings real text
+//! shaping (kerning, ligatures, BiDi, complex scripts) and full OpenType/CFF
+//! support.
 //!
 //! # Quick Start
 //!
@@ -93,10 +94,8 @@ impl Plugin for SharedFontMeshPlugin {
             .register_type::<ScreenSizeCamera>()
             .add_systems(Update, update_text_meshes)
             .add_systems(Update, on_font_asset_event)
-            // Run after Bevy's transform propagation so we measure
-            // GlobalTransforms from the same frame, but write back to
-            // local Transform — propagation will pick up the change on
-            // the next PostUpdate.
+            // PostUpdate: read this frame's GlobalTransform, write to local
+            // Transform; propagation picks the change up next frame.
             .add_systems(PostUpdate, scale_screen_size);
     }
 }

@@ -13,16 +13,16 @@ A simple and focused Bevy plugin for generating 3D text meshes from fonts. Power
 
 ## What it does
 
-Turns TrueType fonts into 3D meshes. You can control the extrusion depth, anchor points, and subdivision quality. Also supports per-character entities if you want to style or animate individual glyphs.
+Turns the same `Handle<bevy::text::Font>` you already use for Bevy's 2D UI text into a 3D extruded mesh. You control extrusion depth, anchor, justification, and subdivision quality; Bevy handles materials, lighting, and rendering.
 
-The plugin just generates the meshes - Bevy handles everything else (materials, lighting, rendering).
+Under the hood, `cosmic-text` shapes the text (kerning, ligatures, BiDi, complex scripts) and [fontmesh](https://crates.io/crates/fontmesh) tessellates each glyph.
 
 ## Quick Start
 
 ```toml
 [dependencies]
 bevy = "0.18"
-bevy_fontmesh = "0.3.0"
+bevy_fontmesh = "0.4"
 ```
 
 ```rust
@@ -58,49 +58,54 @@ fn setup(
 }
 ```
 
-For custom materials, add the plugin for each material type you need:
+For per-character styling use [`TextMeshGlyphs`] / [`TextMeshGlyphsBundle`]; for custom materials, add the plugin a second time with your material type:
 
 ```rust
 app.add_plugins(FontMeshPlugin::<MyCustomMaterial>::default())
 ```
 
-For detailed API documentation and more examples, see [docs.rs/bevy_fontmesh](https://docs.rs/bevy_fontmesh).
+See [docs.rs/bevy_fontmesh](https://docs.rs/bevy_fontmesh) for the full API.
+
+## Rendering both sides
+
+The generated mesh is single-sided (front, back, and outward-facing side walls) — same shape as `ttf2mesh` and previous `bevy_fontmesh` releases. If you look through a glyph's hole (e.g. into the counter of a 'B') and want the back face to render, set:
+
+```rust
+StandardMaterial {
+    double_sided: true,
+    cull_mode: None,
+    ..default()
+}
+```
+
+The examples in this repo all do this.
 
 ## Examples
 
 ```bash
-cargo run --example basic                # Simple 3D text
-cargo run --example multiline             # Multiline with anchoring
-cargo run --example justification         # Text alignment
-cargo run --example anchors               # All anchor points
-cargo run --example per_glyph             # Per-character styling
-cargo run --release --example stress_test # Performance test
-cargo run --release --example showcase    # Metallic "BEVY" with orbiting camera
+cargo run --example basic                  # Simple 3D text
+cargo run --example multiline              # Multiline with anchoring
+cargo run --example justification          # Text alignment
+cargo run --example anchors                # All anchor points
+cargo run --example per_glyph              # Per-character styling
+cargo run --release --example stress_test  # Performance test
+cargo run --release --example showcase     # Metallic "BEVY" with orbiting camera
 ```
 
-## Limitations
+## Supported Formats
 
-- **No kerning**: Character spacing uses advance widths only. Kerning pairs from the font are not applied.
-- **Font parsing**: The font is re-parsed from bytes on each mesh generation. For static text this is fine; if you spawn many text entities at startup, consider reusing `FontMesh` handles so the asset loader runs once.
-- **No CFF/PostScript outlines**: OpenType fonts with CFF outlines are not supported (ttf-parser limitation).
-
-## Why another text plugin?
-
-I wanted something simple that just generates meshes and lets Bevy do the rest. No fancy features, no complex API - just font → mesh.
-
-Supported Formats
-
-- TrueType (`.ttf`) - fully supported
-- OpenType (`.otf`) with TrueType outlines - supported
-- OpenType with CFF/PostScript outlines - not supported (ttf-parser limitation)
+- TrueType (`.ttf`) — fully supported
+- OpenType with TrueType outlines (`.otf`) — fully supported
+- OpenType with CFF/PostScript outlines (`.otf`) — fully supported (new in 0.4)
 
 ## Bevy Version Compatibility
 
 | bevy_fontmesh | Bevy |
 | ------------- | ---- |
-| 0.1           | 0.17 |
-| 0.2           | 0.18 |
+| 0.4           | 0.18 |
 | 0.3           | 0.18 |
+| 0.2           | 0.18 |
+| 0.1           | 0.17 |
 
 ## License
 

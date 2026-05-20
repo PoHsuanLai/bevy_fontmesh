@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-21
+
+### Changed - BREAKING
+
+- **Font loading now uses Bevy's standard [`bevy::text::Font`] asset.** The custom `FontMesh` asset has been removed. `TextMesh::font` and `TextMeshGlyphs::font` are now `Handle<bevy::text::Font>`, so the same handle can drive 2D UI text and 3D text meshes.
+- **Text shaping now goes through [`cosmic-text`]**, the same shaper Bevy's UI text uses. You get real kerning, ligatures, BiDi, and complex-script support. Per-line `JustifyText` alignment is applied by cosmic-text; line wrapping is intentionally disabled (use `\n` for line breaks).
+- **OpenType CFF/PostScript outlines are now supported.** Previously the plugin only handled TrueType outlines because of the `ttf-parser` limitation; the new `skrifa`-based fontmesh handles both.
+- **Per-glyph mesh cache.** Repeated glyphs (e.g. every `'e'` in a paragraph) share one `Handle<Mesh>` instead of being re-tessellated. The cache invalidates automatically when a font asset is modified or unloaded.
+
+### Migration Guide
+
+The hot path is the same — the only thing that changes is the font handle type:
+
+```rust
+// 0.3
+font: asset_server.load::<FontMesh>("fonts/font.ttf"),
+
+// 0.4
+font: asset_server.load::<bevy::text::Font>("fonts/font.ttf"),
+// (or just `asset_server.load("fonts/font.ttf")` — the type is inferred)
+```
+
+If you set `StandardMaterial` for text, add `double_sided: true, cull_mode: None` so the back face is visible when looking through hole-punches (e.g. into the counter of a 'B'). The mesh is single-sided (matching the previous release and `ttf2mesh`).
+
 ## [0.3.0] - 2026-03-02
 
 ### Changed - BREAKING

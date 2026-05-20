@@ -11,10 +11,9 @@ use bevy::text::{CosmicFontSystem, Font};
 use cosmic_text::{fontdb, Attrs, Buffer, Family, Metrics, Shaping, Wrap};
 use fontmesh::{glyph_to_mesh_3d, parse_font, FontRef, GlyphId};
 
-// Cosmic-text shapes at a chosen pixel font size; we pick a fixed value and
-// divide back out to recover em-normalized coordinates that line up with how
-// fontmesh's outlines are emitted (1 em = 1.0). This keeps `TextMeshStyle::depth`
-// using the same scale as before the cosmic-text migration.
+// Cosmic-text shapes in pixel space. We pick a fixed pixel size and divide
+// back out so positions land in the same em-normalized space (1 em = 1.0)
+// that fontmesh emits outlines in.
 const SHAPING_FONT_SIZE: f32 = 64.0;
 const LINE_HEIGHT_FACTOR: f32 = 1.2;
 
@@ -195,10 +194,6 @@ fn shape_text(
     let metrics = Metrics::new(SHAPING_FONT_SIZE, SHAPING_FONT_SIZE * LINE_HEIGHT_FACTOR);
     let mut buffer = Buffer::new(font_system, metrics);
     buffer.set_wrap(font_system, Wrap::None);
-
-    // Cosmic-text uses an unbounded width if we don't set one. For our
-    // justification semantics we don't actually need a fixed width — the
-    // alignment is applied per-line within whatever the layout produced.
     buffer.set_size(font_system, None, None);
 
     let attrs = Attrs::new().family(Family::Name(family)).metrics(metrics);
@@ -218,21 +213,14 @@ fn shape_text(
     let mut min_y_bottom = f32::INFINITY;
 
     for (line_index, run) in buffer.layout_runs().enumerate() {
-        // Cosmic positions are pixel-down (y increases downward from line top).
-        // We want our text mesh to read top-down too, so we negate y to put
-        // line 0 at the top with line N below it (matching the old layout).
+        // Cosmic uses pixel-down y. Flip so line 0 is on top.
         let line_y_em = -(line_index as f32) * line_height_em;
         let line_text = run.text;
         for glyph in run.glyphs {
             let glyph_x_em = (glyph.x + glyph.x_offset) * scale;
-            // glyph.y_offset is rarely non-zero outside of certain CJK
-            // scripts; keep it for correctness.
             let glyph_y_em = line_y_em - glyph.y_offset * scale;
 
-            // glyph.start is a byte index into `line_text`. Pull the leading
-            // codepoint of the cluster; this is what we expose via
-            // `GlyphMesh.character`. It's approximate for ligatures, but
-            // matches the spirit of the old per-glyph API.
+            // For ligature clusters this only exposes the leading codepoint.
             let character = line_text
                 .get(glyph.start..)
                 .and_then(|s| s.chars().next())
@@ -334,7 +322,6 @@ pub fn update_text_meshes(
     mut query: TextMeshQuery,
 ) {
     for (entity, text_mesh, mut mesh_handle) in query.iter_mut() {
-        // Register the font with cosmic-text the first time we see it.
         let family = match registry.ensure_registered(&text_mesh.font, &fonts, &mut font_system.0) {
             Some(r) => r.family.clone(),
             None => continue,
@@ -353,8 +340,8 @@ pub fn update_text_meshes(
             &mut font_system.0,
         );
 
-        // Generate per-glyph meshes (single combined output, so we don't go
-        // through GlyphMeshCache here — every TextMesh is one Mesh3d).
+        // Combined-mesh path: every TextMesh produces a single Mesh3d, so
+        // we skip the per-glyph cache and tessellate inline.
         let mut per_glyph: Vec<(ShapedGlyph, fontmesh::Mesh3D)> = Vec::with_capacity(shaped.len());
         let mut min_bound = Vec3::splat(f32::MAX);
         let mut max_bound = Vec3::splat(f32::MIN);
@@ -429,12 +416,10 @@ pub fn update_glyph_meshes<M: Material>(
             &mut font_system.0,
         );
 
-        // Per-glyph spawn: we use the cache so repeat glyphs share a Mesh handle.
         let font_id = text_glyphs.font.id();
 
-        // Compute bounds first so the anchor offset is consistent with the
-        // combined-mesh path. We need the cached mesh's vertex bounds, which
-        // means tessellating into the cache here.
+        // Bounds first so the anchor offset matches the combined-mesh path.
+        // Forces a cache populate now since we need per-glyph extents.
         let mut min_bound = Vec3::splat(f32::MAX);
         let mut max_bound = Vec3::splat(f32::MIN);
         let mut to_spawn: Vec<(ShapedGlyph, Handle<Mesh>)> = Vec::with_capacity(shaped.len());
