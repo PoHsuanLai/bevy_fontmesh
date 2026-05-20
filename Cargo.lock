@@ -523,14 +523,13 @@ dependencies = [
 
 [[package]]
 name = "bevy_fontmesh"
-version = "0.4.0-dev"
+version = "0.4.0"
 dependencies = [
  "bevy",
  "cosmic-text",
  "criterion",
  "fontmesh",
  "rand",
- "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1968,8 +1967,9 @@ dependencies = [
 
 [[package]]
 name = "fontmesh"
-version = "0.5.0-dev"
-source = "git+https://github.com/PoHsuanLai/fontmesh?branch=main#5072cce1aed392f446d433b29f527d7127b08937"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eea5b18923bfdffd0f3403bb4c78c75dac00b241458af81d939ba0b1f8c47280"
 dependencies = [
  "glam",
  "lyon_tessellation",
