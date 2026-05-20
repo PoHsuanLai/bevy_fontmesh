@@ -1,5 +1,5 @@
-use crate::asset::FontMesh;
 use bevy::prelude::*;
+use bevy::text::Font;
 
 /// Determines where the text mesh is positioned relative to its transform origin.
 ///
@@ -99,7 +99,7 @@ pub struct TextMesh {
     /// The text to display. Use `\n` for line breaks.
     pub text: String,
     /// Handle to the font asset (TTF or OTF file).
-    pub font: Handle<FontMesh>,
+    pub font: Handle<Font>,
     /// Visual style configuration for the text mesh.
     pub style: TextMeshStyle,
 }
@@ -258,7 +258,7 @@ pub struct TextMeshGlyphs {
     /// The text to display. Use `\n` for line breaks.
     pub text: String,
     /// Handle to the font asset (TTF or OTF file).
-    pub font: Handle<FontMesh>,
+    pub font: Handle<Font>,
     /// Visual style configuration for the glyph meshes.
     pub style: TextMeshStyle,
 }

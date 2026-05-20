@@ -11,7 +11,7 @@ const UPDATE_INTERVAL_MS: u64 = 0; // Every frame if 0
 
 #[derive(Resource)]
 struct SceneState {
-    font: Handle<bevy_fontmesh::FontMesh>,
+    font: Handle<bevy::text::Font>,
     text_count: usize,
 }
 

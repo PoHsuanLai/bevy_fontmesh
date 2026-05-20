@@ -1,6 +1,6 @@
 [package]
 name = "bevy_fontmesh"
-version = "0.3.1"
+version = "0.4.0-dev"
 edition = "2021"
 authors = ["Po Hsuan Lai"]
 description = "Simple and focused Bevy plugin for generating 3D text meshes from fonts"
@@ -18,8 +18,10 @@ bevy = { version = "0.18", default-features = false, features = [
     "bevy_asset",
     "bevy_pbr",
     "bevy_render",
+    "bevy_text",
 ] }
-fontmesh = "0.4.1"
+fontmesh = { path = "../fontmesh" }
+cosmic-text = "0.16"
 thiserror = "2.0"
 
 [[bench]]
@@ -31,13 +33,15 @@ bevy = { version = "0.18", default-features = false, features = [
     "bevy_asset",
     "bevy_pbr",
     "bevy_render",
+    "bevy_text",
     "bevy_winit",
     "bevy_core_pipeline",
+    "default_font",
     "multi_threaded",
     "tonemapping_luts",
     "zstd_rust",
     "x11",  # or "wayland" depending on your platform
 ] }
-fontmesh = "0.4.1"
+fontmesh = { path = "../fontmesh" }
 rand = "0.9.2"
 criterion = { version = "0.5", features = ["html_reports"] }
