@@ -1,5 +1,5 @@
-use crate::asset::FontMesh;
 use bevy::prelude::*;
+use bevy::text::Font;
 
 /// Determines where the text mesh is positioned relative to its transform origin.
 ///
@@ -99,7 +99,7 @@ pub struct TextMesh {
     /// The text to display. Use `\n` for line breaks.
     pub text: String,
     /// Handle to the font asset (TTF or OTF file).
-    pub font: Handle<FontMesh>,
+    pub font: Handle<Font>,
     /// Visual style configuration for the text mesh.
     pub style: TextMeshStyle,
 }
@@ -258,7 +258,7 @@ pub struct TextMeshGlyphs {
     /// The text to display. Use `\n` for line breaks.
     pub text: String,
     /// Handle to the font asset (TTF or OTF file).
-    pub font: Handle<FontMesh>,
+    pub font: Handle<Font>,
     /// Visual style configuration for the glyph meshes.
     pub style: TextMeshStyle,
 }
@@ -418,3 +418,51 @@ impl<M: Material + Default> Default for TextMeshBundle<M> {
         }
     }
 }
+
+/// Render the entity's text mesh at a constant *screen-pixel* size,
+/// independent of camera distance / zoom.
+///
+/// Each frame the [`scale_screen_size`](crate::system::scale_screen_size)
+/// system rewrites the entity's `Transform.scale` (uniform on all axes)
+/// so that one line of text covers `pixel_height` pixels in the active
+/// camera's render target. Position stays whatever you put it at; only
+/// scale changes.
+///
+/// Works with both orthographic and perspective cameras and with cameras
+/// rendering to either a window or a `RenderTarget::Image`. For a
+/// perspective camera the system measures `world_per_pixel` at the
+/// entity's depth, so screen-stable size holds wherever the entity sits
+/// in front of the lens.
+///
+/// # Caveats
+///
+/// - Rewrites the *entity's* scale, so don't keep your own per-frame
+///   scale tweaks on the same `Transform.scale` field — they'll be
+///   overwritten. Apply scale on a parent or a child instead.
+/// - Children of a `ScreenSize` entity inherit its scale, which means
+///   their *positions* under the parent's local frame also scale. Put
+///   ScreenSize on leaf label entities, not on a parent intended to
+///   carry world-position layout.
+/// - Picks the first camera it finds when there are multiple. Filter
+///   with [`ScreenSizeCamera`] if you need to pin to a specific one.
+#[derive(Component, Reflect, Clone, Copy, Debug)]
+#[reflect(Component)]
+pub struct ScreenSize {
+    /// Target line-height in logical pixels of the camera's render
+    /// target.
+    pub pixel_height: f32,
+}
+
+impl Default for ScreenSize {
+    fn default() -> Self {
+        Self { pixel_height: 14.0 }
+    }
+}
+
+/// Marker on a `Camera` to opt that camera into being the one
+/// `ScreenSize` measures against. If no entity in the world has this
+/// marker, the screen-size system falls back to whichever camera
+/// `Query<&Camera>` returns first — fine for single-camera apps.
+#[derive(Component, Reflect, Clone, Copy, Debug, Default)]
+#[reflect(Component)]
+pub struct ScreenSizeCamera;

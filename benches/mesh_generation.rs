@@ -3,55 +3,64 @@
 //! These benchmarks measure the core mesh generation pipeline:
 //! font parsing, per-character mesh generation, vertex assembly,
 //! and justification/anchor offset calculation.
+//!
+//! Note: in 0.4 the production code shapes via cosmic-text rather than the
+//! hand-rolled advance-based layout this file mirrors. The bench keeps the
+//! simple layout (cursor_x += advance) because it isolates the parts of the
+//! pipeline that *we* still own — outline tessellation and mesh assembly.
+//! See `update_text_meshes` in `src/system.rs` for the real layout path.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use fontmesh::{
+    ascender, descender, glyph_advance, glyph_id, glyph_to_mesh_3d, line_gap, parse_font, FontRef,
+    GlyphId,
+};
 
 const FONT_DATA: &[u8] = include_bytes!("../assets/fonts/FiraMono-Medium.ttf");
 
-// ── Helpers mirroring system.rs logic ────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
-fn get_glyph_advance(ch: char, face: &fontmesh::Face) -> f32 {
-    fontmesh::glyph_advance(face, ch).unwrap_or_else(|| {
+fn advance(ch: char, font: &FontRef) -> f32 {
+    glyph_advance(font, ch).unwrap_or_else(|| {
         if ch.is_whitespace() {
-            (fontmesh::ascender(face) - fontmesh::descender(face)) * 0.25
+            (ascender(font) - descender(font)) * 0.25
         } else {
             0.0
         }
     })
 }
 
-fn calculate_line_width(line: &str, face: &fontmesh::Face) -> f32 {
-    line.chars().map(|ch| get_glyph_advance(ch, face)).sum()
+fn line_width(line: &str, font: &FontRef) -> f32 {
+    line.chars().map(|ch| advance(ch, font)).sum()
 }
 
-/// Reproduce the core of `update_text_meshes` without Bevy ECS.
+/// Reproduce a center-justified version of the old text layout, without ECS.
 fn generate_text_mesh(
     text: &str,
     depth: f32,
     subdivision: u8,
-    face: &fontmesh::Face,
+    font: &FontRef,
 ) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<u32>) {
     let mut all_vertices: Vec<[f32; 3]> = Vec::new();
     let mut all_normals: Vec<[f32; 3]> = Vec::new();
     let mut all_indices: Vec<u32> = Vec::new();
 
-    let line_height =
-        fontmesh::ascender(face) - fontmesh::descender(face) + fontmesh::line_gap(face);
-
+    let lh = ascender(font) - descender(font) + line_gap(font);
     let mut cursor_y = 0.0f32;
     let mut index_offset = 0u32;
 
     for line in text.split('\n') {
-        let line_width = calculate_line_width(line, face);
-        let mut cursor_x = -line_width * 0.5; // center justification
-
+        let mut cursor_x = -line_width(line, font) * 0.5; // center
         for ch in line.chars() {
             if ch.is_whitespace() {
-                cursor_x += get_glyph_advance(ch, face);
+                cursor_x += advance(ch, font);
                 continue;
             }
-
-            if let Ok(mesh) = fontmesh::char_to_mesh_3d(face, ch, depth, subdivision) {
+            let Some(gid) = glyph_id(font, ch) else {
+                continue;
+            };
+            if let Ok(mesh) = glyph_to_mesh_3d(font, GlyphId::new(gid.to_u32()), depth, subdivision)
+            {
                 all_vertices.extend(
                     mesh.vertices
                         .iter()
@@ -60,61 +69,52 @@ fn generate_text_mesh(
                 all_normals.extend(mesh.normals.iter().map(|n| [n.x, n.y, n.z]));
                 all_indices.extend(mesh.indices.iter().map(|i| i + index_offset));
                 index_offset += mesh.vertices.len() as u32;
-                cursor_x += get_glyph_advance(ch, face);
+                cursor_x += advance(ch, font);
             }
         }
-
-        cursor_y -= line_height;
+        cursor_y -= lh;
     }
 
     (all_vertices, all_normals, all_indices)
 }
 
-// ── Benchmarks ────────────────────────────────────────────────────────────────
+// ── Benchmarks ─────────────────────────────────────────────────────────────
 
-/// Baseline: cost of parsing the font face from bytes each time.
 fn bench_font_parsing(c: &mut Criterion) {
     c.bench_function("font_parse", |b| {
-        b.iter(|| fontmesh::Face::parse(black_box(FONT_DATA), 0).unwrap())
+        b.iter(|| parse_font(black_box(FONT_DATA)).unwrap())
     });
 }
 
-/// Single character mesh generation at different quality levels.
 fn bench_single_char(c: &mut Criterion) {
-    let face = fontmesh::Face::parse(FONT_DATA, 0).unwrap();
+    let font = parse_font(FONT_DATA).unwrap();
+    let gid = glyph_id(&font, 'A').unwrap();
     let mut group = c.benchmark_group("single_char");
-
     for subdivisions in [5u8, 10, 20, 50] {
         group.bench_with_input(
             BenchmarkId::from_parameter(subdivisions),
             &subdivisions,
             |b, &sub| {
-                b.iter(|| {
-                    fontmesh::char_to_mesh_3d(black_box(&face), black_box('A'), 0.5, sub).unwrap()
-                })
+                b.iter(|| glyph_to_mesh_3d(black_box(&font), black_box(gid), 0.5, sub).unwrap())
             },
         );
     }
     group.finish();
 }
 
-/// Full word mesh generation (vertex assembly + justification).
 fn bench_word(c: &mut Criterion) {
-    let face = fontmesh::Face::parse(FONT_DATA, 0).unwrap();
+    let font = parse_font(FONT_DATA).unwrap();
     let mut group = c.benchmark_group("word");
-
     for word in ["Hi", "Hello", "Hello World", "The quick brown fox"] {
         group.bench_with_input(BenchmarkId::from_parameter(word), word, |b, text| {
-            b.iter(|| generate_text_mesh(black_box(text), 0.5, 20, black_box(&face)))
+            b.iter(|| generate_text_mesh(black_box(text), 0.5, 20, black_box(&font)))
         });
     }
     group.finish();
 }
 
-/// Multiline text generation.
 fn bench_multiline(c: &mut Criterion) {
-    let face = fontmesh::Face::parse(FONT_DATA, 0).unwrap();
-
+    let font = parse_font(FONT_DATA).unwrap();
     let texts = [
         ("2_lines", "Hello\nWorld"),
         ("4_lines", "Line one\nLine two\nLine three\nLine four"),
@@ -123,26 +123,23 @@ fn bench_multiline(c: &mut Criterion) {
             "Line one\nLine two\nLine three\nLine four\nLine five\nLine six\nLine seven\nLine eight",
         ),
     ];
-
     let mut group = c.benchmark_group("multiline");
     for (name, text) in &texts {
         group.bench_with_input(BenchmarkId::from_parameter(name), text, |b, text| {
-            b.iter(|| generate_text_mesh(black_box(text), 0.5, 20, black_box(&face)))
+            b.iter(|| generate_text_mesh(black_box(text), 0.5, 20, black_box(&font)))
         });
     }
     group.finish();
 }
 
-/// Impact of subdivision quality on a fixed short string.
 fn bench_quality_levels(c: &mut Criterion) {
-    let face = fontmesh::Face::parse(FONT_DATA, 0).unwrap();
+    let font = parse_font(FONT_DATA).unwrap();
     let mut group = c.benchmark_group("quality");
-
     for subdivisions in [5u8, 10, 20, 50] {
         group.bench_with_input(
             BenchmarkId::from_parameter(subdivisions),
             &subdivisions,
-            |b, &sub| b.iter(|| generate_text_mesh(black_box("Hello"), 0.5, sub, black_box(&face))),
+            |b, &sub| b.iter(|| generate_text_mesh(black_box("Hello"), 0.5, sub, black_box(&font))),
         );
     }
     group.finish();

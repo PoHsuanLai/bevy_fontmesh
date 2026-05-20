@@ -11,7 +11,7 @@ const UPDATE_INTERVAL_MS: u64 = 0; // Every frame if 0
 
 #[derive(Resource)]
 struct SceneState {
-    font: Handle<bevy_fontmesh::FontMesh>,
+    font: Handle<bevy::text::Font>,
     text_count: usize,
 }
 
@@ -77,6 +77,8 @@ fn setup(
             material: MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::BLACK, // Black FPS text
                 unlit: true,              // Make stats text unlit for better visibility
+                double_sided: true,
+                cull_mode: None,
                 ..default()
             })),
             transform: Transform::from_xyz(-10.0, 10.0, 0.0).with_scale(Vec3::splat(1.0)), // Use scale for size
@@ -111,6 +113,8 @@ fn spawn_stress_text(
             let text_material = MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: random_color,
                 unlit: true,
+                double_sided: true,
+                cull_mode: None,
                 ..default()
             }));
 

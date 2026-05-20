@@ -135,6 +135,10 @@ fn setup(
         },
         material: MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::WHITE,
+            // Render both sides so the back face stays visible when viewed
+            // through the front face's hole-punches (the 'B' counters).
+            double_sided: true,
+            cull_mode: None,
             ..default()
         })),
         transform: Transform::from_scale(Vec3::splat(4.0)),
@@ -173,6 +177,8 @@ fn assign_glyph_materials(
                 metallic: 1.0,
                 perceptual_roughness: roughness,
                 reflectance: 1.0,
+                double_sided: true,
+                cull_mode: None,
                 ..default()
             })),
             GlyphAnimated { metal_index },
