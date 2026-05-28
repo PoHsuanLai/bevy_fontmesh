@@ -3,7 +3,7 @@ use crate::component::{
 };
 use bevy::asset::RenderAssetUsages;
 use bevy::ecs::message::MessageReader;
-use bevy::ecs::query::QueryData;
+use bevy::ecs::query::{QueryData, QueryFilter};
 use bevy::ecs::system::SystemParam;
 use bevy::mesh::Indices;
 use bevy::platform::collections::HashMap;
@@ -328,7 +328,10 @@ pub struct TextMeshData {
     mesh: &'static mut Mesh3d,
 }
 
-type TextMeshFilter = Or<(Changed<TextMesh>, Without<TextMeshComputed>)>;
+#[derive(QueryFilter)]
+pub struct TextMeshFilter {
+    _changed: Or<(Changed<TextMesh>, Without<TextMeshComputed>)>,
+}
 
 pub fn update_text_meshes(
     mut commands: Commands,
@@ -404,7 +407,10 @@ pub struct TextMeshGlyphsData<M: Material> {
     default_material: &'static MeshMaterial3d<M>,
 }
 
-type TextMeshGlyphsFilter = Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>;
+#[derive(QueryFilter)]
+pub struct TextMeshGlyphsFilter {
+    _changed: Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>,
+}
 
 /// System to generate per-character mesh entities for [`TextMeshGlyphs`].
 pub fn update_glyph_meshes<M: Material>(
