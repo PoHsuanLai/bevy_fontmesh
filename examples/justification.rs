@@ -1,7 +1,5 @@
 use bevy::prelude::*;
-use bevy_fontmesh::{
-    FontMeshPlugin, JustifyText, TextAnchor, TextMesh, TextMeshBundle, TextMeshStyle,
-};
+use bevy_fontmesh::{FontMeshPlugin, JustifyText, TextAnchor, TextMesh, TextMeshStyle};
 
 fn main() {
     App::new()
@@ -41,8 +39,8 @@ fn setup(
     }));
 
     // Example 1: Left Justified
-    commands.spawn(TextMeshBundle {
-        text_mesh: TextMesh {
+    commands.spawn((
+        TextMesh {
             text: "Left\nJustified\nText".to_string(),
             font: font.clone(),
             style: TextMeshStyle {
@@ -52,14 +50,13 @@ fn setup(
                 justify: JustifyText::Left,
             },
         },
-        material: base_material.clone(),
-        transform: Transform::from_xyz(-5.0, 3.0, 0.0),
-        ..default()
-    });
+        base_material.clone(),
+        Transform::from_xyz(-5.0, 3.0, 0.0),
+    ));
 
     // Example 2: Center Justified
-    commands.spawn(TextMeshBundle {
-        text_mesh: TextMesh {
+    commands.spawn((
+        TextMesh {
             text: "Center\nJustified\nText".to_string(),
             font: font.clone(),
             style: TextMeshStyle {
@@ -69,14 +66,13 @@ fn setup(
                 justify: JustifyText::Center,
             },
         },
-        material: base_material.clone(),
-        transform: Transform::from_xyz(0.0, 3.0, 0.0),
-        ..default()
-    });
+        base_material.clone(),
+        Transform::from_xyz(0.0, 3.0, 0.0),
+    ));
 
     // Example 3: Right Justified
-    commands.spawn(TextMeshBundle {
-        text_mesh: TextMesh {
+    commands.spawn((
+        TextMesh {
             text: "Right\nJustified\nText".to_string(),
             font: font.clone(),
             style: TextMeshStyle {
@@ -86,10 +82,9 @@ fn setup(
                 justify: JustifyText::Right,
             },
         },
-        material: base_material.clone(),
-        transform: Transform::from_xyz(5.0, 3.0, 0.0),
-        ..default()
-    });
+        base_material.clone(),
+        Transform::from_xyz(5.0, 3.0, 0.0),
+    ));
 }
 
 fn rotate_text(time: Res<Time>, mut query: Query<&mut Transform, With<TextMesh>>) {

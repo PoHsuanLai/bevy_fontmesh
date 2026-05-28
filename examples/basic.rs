@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_fontmesh::{FontMeshPlugin, TextMesh, TextMeshBundle, TextMeshStyle};
+use bevy_fontmesh::{FontMeshPlugin, TextMesh, TextMeshStyle};
 
 fn main() {
     App::new()
@@ -45,8 +45,8 @@ fn setup(
     });
 
     // Text
-    commands.spawn(TextMeshBundle {
-        text_mesh: TextMesh {
+    commands.spawn((
+        TextMesh {
             text: "FontMesh".to_string(),
             font: asset_server.load("fonts/FiraMono-Medium.ttf"),
             style: TextMeshStyle {
@@ -55,7 +55,7 @@ fn setup(
                 ..default()
             },
         },
-        material: MeshMaterial3d(materials.add(StandardMaterial {
+        MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgb(0.2, 0.3, 0.8), // Blueish metallic
             metallic: 0.8,             // Slightly less metallic to show some base color
             perceptual_roughness: 0.3, // Rougher to catch more light highlights
@@ -64,7 +64,6 @@ fn setup(
             cull_mode: None,
             ..default()
         })),
-        transform: Transform::from_xyz(-2.5, 0.0, 0.0),
-        ..default()
-    });
+        Transform::from_xyz(-2.5, 0.0, 0.0),
+    ));
 }

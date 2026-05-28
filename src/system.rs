@@ -498,9 +498,6 @@ pub fn update_glyph_meshes<M: Material>(
                         g.position.y + anchor_offset.y,
                         anchor_offset.z,
                     ),
-                    Visibility::default(),
-                    InheritedVisibility::default(),
-                    ViewVisibility::default(),
                 ));
             }
         });

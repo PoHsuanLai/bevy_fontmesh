@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_fontmesh::{FontMeshPlugin, TextAnchor, TextMesh, TextMeshBundle, TextMeshStyle};
+use bevy_fontmesh::{FontMeshPlugin, TextAnchor, TextMesh, TextMeshStyle};
 
 fn main() {
     App::new()
@@ -81,8 +81,8 @@ fn setup(
 
     for (anchor, label, pos) in anchors {
         // Spawn text
-        commands.spawn(TextMeshBundle {
-            text_mesh: TextMesh {
+        commands.spawn((
+            TextMesh {
                 text: format!("{}\n(Pivot)", label),
                 font: font.clone(),
                 style: TextMeshStyle {
@@ -92,10 +92,9 @@ fn setup(
                     ..default()
                 },
             },
-            material: mat.clone(),
-            transform: Transform::from_translation(pos),
-            ..default()
-        });
+            mat.clone(),
+            Transform::from_translation(pos),
+        ));
 
         // Spawn a red sphere at the actual Transform position (the pivot)
         // The text should rotate/position around this red dot based on its anchor

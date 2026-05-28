@@ -2,7 +2,7 @@ use bevy::{
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
     prelude::*,
 };
-use bevy_fontmesh::{FontMeshPlugin, TextAnchor, TextMesh, TextMeshBundle, TextMeshStyle};
+use bevy_fontmesh::{FontMeshPlugin, TextAnchor, TextMesh, TextMeshStyle};
 use rand::prelude::*;
 use std::time::Duration;
 
@@ -63,8 +63,8 @@ fn setup(
 
     // Stats Text
     commands
-        .spawn(TextMeshBundle {
-            text_mesh: TextMesh {
+        .spawn((
+            TextMesh {
                 text: "FPS: 0\nCount: 0".to_string(),
                 font: font.clone(),
                 style: TextMeshStyle {
@@ -74,16 +74,15 @@ fn setup(
                     ..default()
                 },
             },
-            material: MeshMaterial3d(materials.add(StandardMaterial {
+            MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::BLACK, // Black FPS text
                 unlit: true,              // Make stats text unlit for better visibility
                 double_sided: true,
                 cull_mode: None,
                 ..default()
             })),
-            transform: Transform::from_xyz(-10.0, 10.0, 0.0).with_scale(Vec3::splat(1.0)), // Use scale for size
-            ..default()
-        })
+            Transform::from_xyz(-10.0, 10.0, 0.0).with_scale(Vec3::splat(1.0)),
+        ))
         .insert(StatsText);
 }
 
@@ -119,8 +118,8 @@ fn spawn_stress_text(
             }));
 
             commands
-                .spawn(TextMeshBundle {
-                    text_mesh: TextMesh {
+                .spawn((
+                    TextMesh {
                         text: format!("{:.1}", time.elapsed_secs()),
                         font: state.font.clone(),
                         style: TextMeshStyle {
@@ -130,10 +129,9 @@ fn spawn_stress_text(
                             ..default()
                         },
                     },
-                    material: text_material, // Use generated random material
-                    transform: Transform::from_translation(pos).with_scale(Vec3::splat(scale)),
-                    ..default()
-                })
+                    text_material, // Use generated random material
+                    Transform::from_translation(pos).with_scale(Vec3::splat(scale)),
+                ))
                 .insert(StressText);
 
             state.text_count += 1;
