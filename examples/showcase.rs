@@ -122,8 +122,8 @@ fn setup(
             ));
         });
 
-    commands.spawn(TextMeshGlyphsBundle {
-        text_glyphs: TextMeshGlyphs {
+    commands.spawn((
+        TextMeshGlyphs {
             text: "BEVY".to_string(),
             font: asset_server.load("fonts/Inter-Bold.otf"),
             style: TextMeshStyle {
@@ -133,7 +133,7 @@ fn setup(
                 ..default()
             },
         },
-        material: MeshMaterial3d(materials.add(StandardMaterial {
+        MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::WHITE,
             // Render both sides so the back face stays visible when viewed
             // through the front face's hole-punches (the 'B' counters).
@@ -141,9 +141,8 @@ fn setup(
             cull_mode: None,
             ..default()
         })),
-        transform: Transform::from_scale(Vec3::splat(4.0)),
-        ..default()
-    });
+        Transform::from_scale(Vec3::splat(4.0)),
+    ));
 }
 
 // ── Metal palette ─────────────────────────────────────────────────────────────

@@ -42,8 +42,10 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn(TextMeshBundle {
-        text_mesh: TextMesh {
+    // `TextMesh` requires `Mesh3d` (and transitively `Transform`/`Visibility`),
+    // so you spawn it directly alongside a material.
+    commands.spawn((
+        TextMesh {
             text: "Hello, World!".to_string(),
             font: asset_server.load("fonts/font.ttf"),
             style: TextMeshStyle {
@@ -52,13 +54,12 @@ fn setup(
                 ..default()
             },
         },
-        material: MeshMaterial3d(materials.add(StandardMaterial::default())),
-        ..default()
-    });
+        MeshMaterial3d(materials.add(StandardMaterial::default())),
+    ));
 }
 ```
 
-For per-character styling use [`TextMeshGlyphs`] / [`TextMeshGlyphsBundle`]; for custom materials, add the plugin a second time with your material type:
+For per-character styling use [`TextMeshGlyphs`]; for custom materials, add the plugin a second time with your material type:
 
 ```rust
 app.add_plugins(FontMeshPlugin::<MyCustomMaterial>::default())

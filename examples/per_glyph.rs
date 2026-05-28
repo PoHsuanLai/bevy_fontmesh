@@ -43,8 +43,8 @@ fn setup(
 
     // Spawn text with per-glyph entities
     // Each character will be its own entity that can be styled independently
-    commands.spawn(TextMeshGlyphsBundle {
-        text_glyphs: TextMeshGlyphs {
+    commands.spawn((
+        TextMeshGlyphs {
             text: "Hello\nWorld".to_string(),
             font: asset_server.load("fonts/FiraMono-Medium.ttf"),
             style: TextMeshStyle {
@@ -53,7 +53,7 @@ fn setup(
                 ..default()
             },
         },
-        material: MeshMaterial3d(materials.add(StandardMaterial {
+        MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::WHITE,
             metallic: 0.5,
             perceptual_roughness: 0.4,
@@ -61,9 +61,8 @@ fn setup(
             cull_mode: None,
             ..default()
         })),
-        transform: Transform::from_xyz(-2.0, 1.0, 0.0),
-        ..default()
-    });
+        Transform::from_xyz(-2.0, 1.0, 0.0),
+    ));
 }
 
 /// System to color each glyph differently based on its character

@@ -3,6 +3,8 @@ use crate::component::{
 };
 use bevy::asset::RenderAssetUsages;
 use bevy::ecs::message::MessageReader;
+use bevy::ecs::query::{QueryData, QueryFilter};
+use bevy::ecs::system::SystemParam;
 use bevy::mesh::Indices;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
@@ -306,27 +308,51 @@ pub struct TextMeshGlyphsComputed;
 
 // ── Systems ───────────────────────────────────────────────────────────────────
 
-type TextMeshQuery<'w, 's> = Query<
-    'w,
-    's,
-    (Entity, &'static TextMesh, &'static mut Mesh3d),
-    Or<(Changed<TextMesh>, Without<TextMeshComputed>)>,
->;
+/// Shared resources used by both mesh-generation systems. Bundled into a single
+/// [`SystemParam`] so the per-system signatures stay under clippy's
+/// `too_many_arguments` threshold without scattering related state across many
+/// arguments.
+#[derive(SystemParam)]
+pub struct FontMeshResources<'w> {
+    meshes: ResMut<'w, Assets<Mesh>>,
+    fonts: Res<'w, Assets<Font>>,
+    font_system: ResMut<'w, CosmicFontSystem>,
+    registry: ResMut<'w, FontMeshRegistry>,
+}
+
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub struct TextMeshData {
+    entity: Entity,
+    text_mesh: &'static TextMesh,
+    mesh: &'static mut Mesh3d,
+}
+
+#[derive(QueryFilter)]
+pub struct TextMeshFilter {
+    _changed: Or<(Changed<TextMesh>, Without<TextMeshComputed>)>,
+}
 
 pub fn update_text_meshes(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    fonts: Res<Assets<Font>>,
-    mut font_system: ResMut<CosmicFontSystem>,
-    mut registry: ResMut<FontMeshRegistry>,
-    mut query: TextMeshQuery,
+    mut res: FontMeshResources,
+    mut query: Query<TextMeshData, TextMeshFilter>,
 ) {
-    for (entity, text_mesh, mut mesh_handle) in query.iter_mut() {
-        let family = match registry.ensure_registered(&text_mesh.font, &fonts, &mut font_system.0) {
+    for TextMeshDataItem {
+        entity,
+        text_mesh,
+        mesh: mut mesh_handle,
+    } in query.iter_mut()
+    {
+        let family = match res.registry.ensure_registered(
+            &text_mesh.font,
+            &res.fonts,
+            &mut res.font_system.0,
+        ) {
             Some(r) => r.family.clone(),
             None => continue,
         };
-        let Some(font_asset) = fonts.get(&text_mesh.font) else {
+        let Some(font_asset) = res.fonts.get(&text_mesh.font) else {
             continue;
         };
         let Ok(font_ref) = parse_font(&font_asset.data) else {
@@ -337,7 +363,7 @@ pub fn update_text_meshes(
             &text_mesh.text,
             &family,
             text_mesh.style.justify,
-            &mut font_system.0,
+            &mut res.font_system.0,
         );
 
         // Combined-mesh path: every TextMesh produces a single Mesh3d, so
@@ -369,38 +395,47 @@ pub fn update_text_meshes(
         };
 
         let combined = combine_shaped_meshes(&per_glyph, anchor_offset);
-        mesh_handle.0 = meshes.add(combined);
+        mesh_handle.0 = res.meshes.add(combined);
         commands.entity(entity).insert(TextMeshComputed);
     }
 }
 
-type TextMeshGlyphsQuery<'w, 's, M> = Query<
-    'w,
-    's,
-    (Entity, &'static TextMeshGlyphs, &'static MeshMaterial3d<M>),
-    Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>,
->;
+#[derive(QueryData)]
+pub struct TextMeshGlyphsData<M: Material> {
+    entity: Entity,
+    text_glyphs: &'static TextMeshGlyphs,
+    default_material: &'static MeshMaterial3d<M>,
+}
+
+#[derive(QueryFilter)]
+pub struct TextMeshGlyphsFilter {
+    _changed: Or<(Changed<TextMeshGlyphs>, Without<TextMeshGlyphsComputed>)>,
+}
 
 /// System to generate per-character mesh entities for [`TextMeshGlyphs`].
-#[allow(clippy::too_many_arguments)]
 pub fn update_glyph_meshes<M: Material>(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    fonts: Res<Assets<Font>>,
-    mut font_system: ResMut<CosmicFontSystem>,
-    mut registry: ResMut<FontMeshRegistry>,
+    mut res: FontMeshResources,
     mut cache: ResMut<GlyphMeshCache>,
-    query: TextMeshGlyphsQuery<M>,
+    query: Query<TextMeshGlyphsData<M>, TextMeshGlyphsFilter>,
     children_query: Query<&Children>,
     glyph_query: Query<Entity, With<GlyphMesh>>,
 ) {
-    for (entity, text_glyphs, default_material) in query.iter() {
-        let family = match registry.ensure_registered(&text_glyphs.font, &fonts, &mut font_system.0)
-        {
+    for TextMeshGlyphsDataItem {
+        entity,
+        text_glyphs,
+        default_material,
+    } in query.iter()
+    {
+        let family = match res.registry.ensure_registered(
+            &text_glyphs.font,
+            &res.fonts,
+            &mut res.font_system.0,
+        ) {
             Some(r) => r.family.clone(),
             None => continue,
         };
-        let Some(font_asset) = fonts.get(&text_glyphs.font) else {
+        let Some(font_asset) = res.fonts.get(&text_glyphs.font) else {
             continue;
         };
         let Ok(font_ref) = parse_font(&font_asset.data) else {
@@ -413,7 +448,7 @@ pub fn update_glyph_meshes<M: Material>(
             &text_glyphs.text,
             &family,
             text_glyphs.style.justify,
-            &mut font_system.0,
+            &mut res.font_system.0,
         );
 
         let font_id = text_glyphs.font.id();
@@ -427,7 +462,7 @@ pub fn update_glyph_meshes<M: Material>(
         for g in shaped {
             let Some(cached) = get_or_build_glyph_mesh(
                 &mut cache,
-                &mut meshes,
+                &mut res.meshes,
                 &font_ref,
                 font_id,
                 g.glyph_id,
@@ -463,9 +498,6 @@ pub fn update_glyph_meshes<M: Material>(
                         g.position.y + anchor_offset.y,
                         anchor_offset.z,
                     ),
-                    Visibility::default(),
-                    InheritedVisibility::default(),
-                    ViewVisibility::default(),
                 ));
             }
         });

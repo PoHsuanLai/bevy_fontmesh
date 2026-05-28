@@ -25,15 +25,14 @@
 //!     asset_server: Res<AssetServer>,
 //!     mut materials: ResMut<Assets<StandardMaterial>>,
 //! ) {
-//!     commands.spawn(TextMeshBundle {
-//!         text_mesh: TextMesh {
+//!     commands.spawn((
+//!         TextMesh {
 //!             text: "Hello!".to_string(),
 //!             font: asset_server.load("fonts/font.ttf"),
 //!             ..default()
 //!         },
-//!         material: MeshMaterial3d(materials.add(StandardMaterial::default())),
-//!         ..default()
-//!     });
+//!         MeshMaterial3d(materials.add(StandardMaterial::default())),
+//!     ));
 //! }
 //! ```
 //!
@@ -67,8 +66,8 @@ pub mod prelude;
 mod system;
 
 pub use component::{
-    GlyphMesh, JustifyText, ScreenSize, ScreenSizeCamera, TextAnchor, TextMesh, TextMeshBundle,
-    TextMeshGlyphs, TextMeshGlyphsBundle, TextMeshStyle,
+    GlyphMesh, JustifyText, ScreenSize, ScreenSizeCamera, TextAnchor, TextMesh, TextMeshGlyphs,
+    TextMeshStyle,
 };
 pub use system::{
     on_font_asset_event, scale_screen_size, update_glyph_meshes, FontMeshRegistry, GlyphMeshCache,
@@ -89,6 +88,9 @@ impl Plugin for SharedFontMeshPlugin {
             .init_resource::<GlyphMeshCache>()
             .register_type::<TextMesh>()
             .register_type::<TextMeshGlyphs>()
+            .register_type::<TextMeshStyle>()
+            .register_type::<TextAnchor>()
+            .register_type::<JustifyText>()
             .register_type::<GlyphMesh>()
             .register_type::<ScreenSize>()
             .register_type::<ScreenSizeCamera>()

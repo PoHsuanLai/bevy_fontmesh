@@ -59,18 +59,18 @@ pub enum TextAnchor {
 /// # use bevy::prelude::*;
 /// # use bevy_fontmesh::prelude::*;
 /// # fn example(mut commands: Commands, asset_server: Res<AssetServer>) {
-/// commands.spawn(TextMeshBundle::<StandardMaterial> {
-///     text_mesh: TextMesh {
-///         text: "Hello, World!".to_string(),
-///         font: asset_server.load("fonts/font.ttf"),
-///         style: TextMeshStyle {
-///             depth: 0.5,
-///             subdivision: 25,
-///             anchor: TextAnchor::Center,
-///             justify: JustifyText::Center,
-///         },
+/// // `TextMesh` requires `Mesh3d` (and transitively `Transform`/`Visibility`),
+/// // so it can be spawned on its own; add a `MeshMaterial3d<M>` to control how
+/// // it renders.
+/// commands.spawn(TextMesh {
+///     text: "Hello, World!".to_string(),
+///     font: asset_server.load("fonts/font.ttf"),
+///     style: TextMeshStyle {
+///         depth: 0.5,
+///         subdivision: 25,
+///         anchor: TextAnchor::Center,
+///         justify: JustifyText::Center,
 ///     },
-///     ..default()
 /// });
 /// # }
 /// ```
@@ -83,18 +83,16 @@ pub enum TextAnchor {
 /// # use bevy::prelude::*;
 /// # use bevy_fontmesh::prelude::*;
 /// # fn example(mut commands: Commands, asset_server: Res<AssetServer>) {
-/// commands.spawn(TextMeshBundle::<StandardMaterial> {
-///     text_mesh: TextMesh {
-///         text: "Line 1\nLine 2\nLine 3".to_string(),
-///         font: asset_server.load("fonts/font.ttf"),
-///         ..default()
-///     },
+/// commands.spawn(TextMesh {
+///     text: "Line 1\nLine 2\nLine 3".to_string(),
+///     font: asset_server.load("fonts/font.ttf"),
 ///     ..default()
 /// });
 /// # }
 /// ```
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Clone, Debug, Default)]
 #[reflect(Component)]
+#[require(Mesh3d)]
 pub struct TextMesh {
     /// The text to display. Use `\n` for line breaks.
     pub text: String,
@@ -240,20 +238,20 @@ impl Default for TextMeshStyle {
 /// #     asset_server: Res<AssetServer>,
 /// #     mut materials: ResMut<Assets<StandardMaterial>>,
 /// # ) {
-/// commands.spawn(TextMeshGlyphsBundle {
-///     text_glyphs: TextMeshGlyphs {
+/// commands.spawn((
+///     TextMeshGlyphs {
 ///         text: "Hello".to_string(),
 ///         font: asset_server.load("fonts/font.ttf"),
 ///         style: TextMeshStyle::default(),
 ///     },
 ///     // Default material for all glyphs (can be overridden per-glyph)
-///     material: MeshMaterial3d(materials.add(StandardMaterial::default())),
-///     ..default()
-/// });
+///     MeshMaterial3d(materials.add(StandardMaterial::default())),
+/// ));
 /// # }
 /// ```
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Clone, Debug, Default)]
 #[reflect(Component)]
+#[require(Transform, Visibility)]
 pub struct TextMeshGlyphs {
     /// The text to display. Use `\n` for line breaks.
     pub text: String,
@@ -282,141 +280,6 @@ pub struct GlyphMesh {
     pub line_index: usize,
     /// The character this glyph represents
     pub character: char,
-}
-
-/// Convenience bundle for spawning 3D text with per-character entities.
-///
-/// This bundle is similar to [`TextMeshBundle`] but uses [`TextMeshGlyphs`] instead,
-/// which spawns separate child entities for each character.
-///
-/// # Examples
-///
-/// ```no_run
-/// # use bevy::prelude::*;
-/// # use bevy_fontmesh::prelude::*;
-/// # fn example(
-/// #     mut commands: Commands,
-/// #     asset_server: Res<AssetServer>,
-/// #     mut materials: ResMut<Assets<StandardMaterial>>,
-/// # ) {
-/// commands.spawn(TextMeshGlyphsBundle {
-///     text_glyphs: TextMeshGlyphs {
-///         text: "Code".to_string(),
-///         font: asset_server.load("fonts/font.ttf"),
-///         style: TextMeshStyle {
-///             depth: 0.1,
-///             ..default()
-///         },
-///     },
-///     material: MeshMaterial3d(materials.add(StandardMaterial {
-///         base_color: Color::WHITE,
-///         ..default()
-///     })),
-///     transform: Transform::from_xyz(0.0, 0.0, 0.0),
-///     ..default()
-/// });
-/// # }
-/// ```
-#[derive(Bundle)]
-pub struct TextMeshGlyphsBundle<M: Material = StandardMaterial> {
-    /// The text glyphs component that drives per-character mesh generation.
-    pub text_glyphs: TextMeshGlyphs,
-    /// Default material for glyph meshes (can be overridden per-glyph).
-    pub material: MeshMaterial3d<M>,
-    /// Local transform of the parent entity.
-    pub transform: Transform,
-    /// Global transform (computed automatically).
-    pub global_transform: GlobalTransform,
-    /// Visibility of the entity.
-    pub visibility: Visibility,
-    /// Inherited visibility (computed automatically).
-    pub inherited_visibility: InheritedVisibility,
-    /// View visibility (computed automatically).
-    pub view_visibility: ViewVisibility,
-}
-
-impl<M: Material + Default> Default for TextMeshGlyphsBundle<M> {
-    fn default() -> Self {
-        Self {
-            text_glyphs: Default::default(),
-            material: Default::default(),
-            transform: Default::default(),
-            global_transform: Default::default(),
-            visibility: Default::default(),
-            inherited_visibility: Default::default(),
-            view_visibility: Default::default(),
-        }
-    }
-}
-
-/// Convenience bundle for spawning 3D text entities.
-///
-/// This bundle includes all necessary components for rendering 3D text in Bevy:
-/// the [`TextMesh`] component for mesh generation, along with all standard 3D rendering
-/// components (mesh, material, transform, visibility).
-///
-/// # Examples
-///
-/// ```no_run
-/// # use bevy::prelude::*;
-/// # use bevy_fontmesh::prelude::*;
-/// # fn example(
-/// #     mut commands: Commands,
-/// #     asset_server: Res<AssetServer>,
-/// #     mut materials: ResMut<Assets<StandardMaterial>>,
-/// # ) {
-/// commands.spawn(TextMeshBundle {
-///     text_mesh: TextMesh {
-///         text: "Hello, Bevy!".to_string(),
-///         font: asset_server.load("fonts/font.ttf"),
-///         style: TextMeshStyle {
-///             depth: 0.5,
-///             anchor: TextAnchor::Center,
-///             ..default()
-///         },
-///     },
-///     material: MeshMaterial3d(materials.add(StandardMaterial {
-///         base_color: Color::srgb(1.0, 0.5, 0.2),
-///         ..default()
-///     })),
-///     transform: Transform::from_xyz(0.0, 1.0, 0.0),
-///     ..default()
-/// });
-/// # }
-/// ```
-#[derive(Bundle)]
-pub struct TextMeshBundle<M: Material = StandardMaterial> {
-    /// The text mesh component that drives mesh generation.
-    pub text_mesh: TextMesh,
-    /// The 3D mesh handle (automatically populated by the plugin system).
-    pub mesh: Mesh3d,
-    /// Material applied to the text mesh.
-    pub material: MeshMaterial3d<M>,
-    /// Local transform of the entity.
-    pub transform: Transform,
-    /// Global transform (computed automatically).
-    pub global_transform: GlobalTransform,
-    /// Visibility of the entity.
-    pub visibility: Visibility,
-    /// Inherited visibility (computed automatically).
-    pub inherited_visibility: InheritedVisibility,
-    /// View visibility (computed automatically).
-    pub view_visibility: ViewVisibility,
-}
-
-impl<M: Material + Default> Default for TextMeshBundle<M> {
-    fn default() -> Self {
-        Self {
-            text_mesh: Default::default(),
-            mesh: Default::default(),
-            material: Default::default(),
-            transform: Default::default(),
-            global_transform: Default::default(),
-            visibility: Default::default(),
-            inherited_visibility: Default::default(),
-            view_visibility: Default::default(),
-        }
-    }
 }
 
 /// Render the entity's text mesh at a constant *screen-pixel* size,

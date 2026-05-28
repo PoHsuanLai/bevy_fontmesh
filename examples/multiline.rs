@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_fontmesh::{FontMeshPlugin, TextAnchor, TextMesh, TextMeshBundle, TextMeshStyle};
+use bevy_fontmesh::{FontMeshPlugin, TextAnchor, TextMesh, TextMeshStyle};
 
 fn main() {
     App::new()
@@ -49,8 +49,8 @@ fn setup(
     // Helper closure to spawn text with pivot
     let mut spawn_example = |text: &str, anchor: TextAnchor, pos: Vec3| {
         // Text
-        commands.spawn(TextMeshBundle {
-            text_mesh: TextMesh {
+        commands.spawn((
+            TextMesh {
                 text: text.to_string(),
                 font: font.clone(),
                 style: TextMeshStyle {
@@ -60,10 +60,9 @@ fn setup(
                     ..default()
                 },
             },
-            material: base_material.clone(),
-            transform: Transform::from_translation(pos),
-            ..default()
-        });
+            base_material.clone(),
+            Transform::from_translation(pos),
+        ));
 
         // Pivot Marker
         commands.spawn((

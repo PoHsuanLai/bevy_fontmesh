@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed - BREAKING
+
+- **`TextMeshBundle` and `TextMeshGlyphsBundle` have been removed** in favor of Bevy's required-components model. `TextMesh` now `#[require(Mesh3d)]` (which transitively pulls in `Transform`/`Visibility`), and `TextMeshGlyphs` now `#[require(Transform, Visibility)]`, so the driver component can be spawned directly alongside a material.
+
+### Migration Guide
+
+```rust
+// before
+commands.spawn(TextMeshBundle {
+    text_mesh: TextMesh { /* .. */ },
+    material: MeshMaterial3d(my_material),
+    transform: Transform::from_xyz(0.0, 1.0, 0.0),
+    ..default()
+});
+
+// after
+commands.spawn((
+    TextMesh { /* .. */ },
+    MeshMaterial3d(my_material),
+    Transform::from_xyz(0.0, 1.0, 0.0),
+));
+```
+
+The same applies to `TextMeshGlyphsBundle` → `(TextMeshGlyphs { .. }, MeshMaterial3d(..))`.
+
+### Added
+
+- `TextMesh` and `TextMeshGlyphs` now derive `Clone` and `Debug`.
+- `TextMeshStyle`, `TextAnchor`, and `JustifyText` are now registered for reflection, so the full `TextMesh`/`TextMeshGlyphs` field trees are visible to inspectors and scene serialization.
+
 ## [0.4.0] - 2026-05-21
 
 ### Changed - BREAKING
