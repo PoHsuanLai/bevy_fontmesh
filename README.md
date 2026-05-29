@@ -22,7 +22,7 @@ Under the hood, `cosmic-text` shapes the text (kerning, ligatures, BiDi, complex
 ```toml
 [dependencies]
 bevy = "0.18"
-bevy_fontmesh = "0.4"
+bevy_fontmesh = "0.5"
 ```
 
 ```rust
@@ -103,9 +103,7 @@ cargo run --release --example showcase     # Metallic "BEVY" with orbiting camer
 
 | bevy_fontmesh | Bevy |
 | ------------- | ---- |
-| 0.4           | 0.18 |
-| 0.3           | 0.18 |
-| 0.2           | 0.18 |
+| 0.2 – 0.5     | 0.18 |
 | 0.1           | 0.17 |
 
 ## License
