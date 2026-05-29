@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-29
+
 ### Changed - BREAKING
 
 - **`TextMeshBundle` and `TextMeshGlyphsBundle` have been removed** in favor of Bevy's required-components model. `TextMesh` now `#[require(Mesh3d)]` (which transitively pulls in `Transform`/`Visibility`), and `TextMeshGlyphs` now `#[require(Transform, Visibility)]`, so the driver component can be spawned directly alongside a material.
