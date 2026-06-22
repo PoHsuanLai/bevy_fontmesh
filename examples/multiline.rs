@@ -24,7 +24,7 @@ fn setup(
     commands
         .spawn(PointLight {
             intensity: 1500.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         })
         .insert(Transform::from_xyz(4.0, 8.0, 4.0));

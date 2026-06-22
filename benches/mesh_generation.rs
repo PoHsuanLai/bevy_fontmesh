@@ -4,9 +4,9 @@
 //! font parsing, per-character mesh generation, vertex assembly,
 //! and justification/anchor offset calculation.
 //!
-//! Note: in 0.4 the production code shapes via cosmic-text rather than the
-//! hand-rolled advance-based layout this file mirrors. The bench keeps the
-//! simple layout (cursor_x += advance) because it isolates the parts of the
+//! Note: the production code shapes via parley (Bevy 0.19's text stack) rather
+//! than the hand-rolled advance-based layout this file mirrors. The bench keeps
+//! the simple layout (cursor_x += advance) because it isolates the parts of the
 //! pipeline that *we* still own — outline tessellation and mesh assembly.
 //! See `update_text_meshes` in `src/system.rs` for the real layout path.
 

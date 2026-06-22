@@ -9,24 +9,34 @@ use bevy::mesh::Indices;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
-use bevy::text::{CosmicFontSystem, Font};
-use cosmic_text::{fontdb, Attrs, Buffer, Family, Metrics, Shaping, Wrap};
+use bevy::text::Font;
 use fontmesh::{glyph_to_mesh_3d, parse_font, FontRef, GlyphId};
+use parley::{
+    Alignment, AlignmentOptions, FontContext, FontFamily, LayoutContext, StyleProperty,
+};
 
-// Cosmic-text shapes in pixel space. We pick a fixed pixel size and divide
+// Parley shapes in pixel space. We pick a fixed pixel size and divide
 // back out so positions land in the same em-normalized space (1 em = 1.0)
 // that fontmesh emits outlines in.
 const SHAPING_FONT_SIZE: f32 = 64.0;
 const LINE_HEIGHT_FACTOR: f32 = 1.2;
 
-// ── Font registration cache ──────────────────────────────────────────────────
+// ── parley shaping context ────────────────────────────────────────────────────
 
-/// Tracks which `Handle<Font>` we've already pushed into cosmic-text's font
-/// database, plus the family name we need to pass back into `Attrs` so cosmic
-/// picks that exact face. Without this we'd re-register the same bytes every
-/// frame, ballooning the db.
+/// Owns the parley contexts used to lay text out before tessellation.
+///
+/// Bevy 0.19 dropped cosmic-text in favour of parley, so there is no shared
+/// `CosmicFontSystem` resource to borrow any more. We keep our own
+/// [`FontContext`] (font database + cache) and [`LayoutContext`] (layout
+/// scratch space) so shaping is fully self-contained and doesn't depend on
+/// Bevy's text-collection lifecycle (which clears/rebuilds on font removal).
 #[derive(Resource, Default)]
-pub struct FontMeshRegistry {
+pub struct FontMeshShaper {
+    font_cx: FontContext,
+    layout_cx: LayoutContext<()>,
+    /// Maps each registered `Handle<Font>` to the parley family name we resolved
+    /// for it, so we can target that exact face when shaping. Without this we'd
+    /// re-register the same bytes every frame, ballooning the collection.
     registered: HashMap<AssetId<Font>, RegisteredFont>,
 }
 
@@ -34,23 +44,24 @@ struct RegisteredFont {
     family: String,
 }
 
-impl FontMeshRegistry {
+impl FontMeshShaper {
+    /// Register the font behind `handle` into our parley collection (once),
+    /// returning the resolved family name to target during shaping.
     fn ensure_registered(
         &mut self,
         handle: &Handle<Font>,
         fonts: &Assets<Font>,
-        font_system: &mut cosmic_text::FontSystem,
     ) -> Option<&RegisteredFont> {
         let id = handle.id();
         if !self.registered.contains_key(&id) {
             let font_asset = fonts.get(id)?;
-            let data = font_asset.data.clone();
-            let face_ids = font_system
-                .db_mut()
-                .load_font_source(fontdb::Source::Binary(data));
-            let face_id = *face_ids.last()?;
-            let face = font_system.db().face(face_id)?;
-            let family = face.families.first()?.0.clone();
+            // `Font::data` is already a `fontique::Blob<u8>` in Bevy 0.19.
+            let registered = self
+                .font_cx
+                .collection
+                .register_fonts(font_asset.data.clone(), None);
+            let (family_id, _) = registered.first()?;
+            let family = self.font_cx.collection.family_name(*family_id)?.to_string();
             self.registered.insert(id, RegisteredFont { family });
         }
         self.registered.get(&id)
@@ -63,7 +74,7 @@ impl FontMeshRegistry {
 
 pub fn on_font_asset_event(
     mut events: MessageReader<AssetEvent<Font>>,
-    mut registry: ResMut<FontMeshRegistry>,
+    mut shaper: ResMut<FontMeshShaper>,
     mut cache: ResMut<GlyphMeshCache>,
 ) {
     for ev in events.read() {
@@ -71,7 +82,7 @@ pub fn on_font_asset_event(
             &AssetEvent::Modified { id }
             | &AssetEvent::Removed { id }
             | &AssetEvent::Unused { id } => {
-                registry.invalidate(id);
+                shaper.invalidate(id);
                 cache.invalidate_font(id);
             }
             AssetEvent::Added { .. } | AssetEvent::LoadedWithDependencies { .. } => {}
@@ -184,62 +195,82 @@ struct ShapedGlyph {
     position: Vec2,
 }
 
-/// Shape `text` using cosmic-text against the font registered as `face_id`,
-/// returning em-normalized glyph positions and the y range we'll need for
-/// anchor offset later.
+/// Shape `text` with parley against the registered `family`, returning
+/// em-normalized glyph positions and the y range we'll need for anchor offset
+/// later.
+///
+/// Parley lays out in pixel space (y grows downward); we divide every
+/// coordinate by [`SHAPING_FONT_SIZE`] so positions land in the same
+/// em-normalized space (1 em = 1.0) that fontmesh emits outlines in, and flip y
+/// so line 0 sits on top.
 fn shape_text(
     text: &str,
     family: &str,
     justify: JustifyText,
-    font_system: &mut cosmic_text::FontSystem,
+    shaper: &mut FontMeshShaper,
 ) -> (Vec<ShapedGlyph>, f32, f32) {
-    let metrics = Metrics::new(SHAPING_FONT_SIZE, SHAPING_FONT_SIZE * LINE_HEIGHT_FACTOR);
-    let mut buffer = Buffer::new(font_system, metrics);
-    buffer.set_wrap(font_system, Wrap::None);
-    buffer.set_size(font_system, None, None);
+    let FontMeshShaper {
+        font_cx, layout_cx, ..
+    } = shaper;
 
-    let attrs = Attrs::new().family(Family::Name(family)).metrics(metrics);
-    let cosmic_align = Some(match justify {
-        JustifyText::Left => cosmic_text::Align::Left,
-        JustifyText::Center => cosmic_text::Align::Center,
-        JustifyText::Right => cosmic_text::Align::Right,
-    });
-    buffer.set_text(font_system, text, &attrs, Shaping::Advanced, cosmic_align);
-    buffer.shape_until_scroll(font_system, false);
+    let mut builder = layout_cx.ranged_builder(font_cx, text, 1.0, true);
+    builder.push_default(StyleProperty::FontFamily(FontFamily::named(family)));
+    builder.push_default(StyleProperty::FontSize(SHAPING_FONT_SIZE));
+    builder.push_default(StyleProperty::LineHeight(
+        parley::LineHeight::FontSizeRelative(LINE_HEIGHT_FACTOR),
+    ));
+
+    let mut layout = builder.build(text);
+    // No wrapping: a single line per `\n`-delimited paragraph.
+    layout.break_all_lines(None);
+    let alignment = match justify {
+        JustifyText::Left => Alignment::Left,
+        JustifyText::Center => Alignment::Center,
+        JustifyText::Right => Alignment::Right,
+    };
+    layout.align(alignment, AlignmentOptions::default());
 
     let scale = 1.0 / SHAPING_FONT_SIZE;
-    let line_height_em = LINE_HEIGHT_FACTOR;
 
     let mut shaped = Vec::new();
     let mut max_y_top = f32::NEG_INFINITY;
     let mut min_y_bottom = f32::INFINITY;
 
-    for (line_index, run) in buffer.layout_runs().enumerate() {
-        // Cosmic uses pixel-down y. Flip so line 0 is on top.
-        let line_y_em = -(line_index as f32) * line_height_em;
-        let line_text = run.text;
-        for glyph in run.glyphs {
-            let glyph_x_em = (glyph.x + glyph.x_offset) * scale;
-            let glyph_y_em = line_y_em - glyph.y_offset * scale;
-
-            // For ligature clusters this only exposes the leading codepoint.
-            let character = line_text
-                .get(glyph.start..)
-                .and_then(|s| s.chars().next())
-                .unwrap_or('\0');
-
-            shaped.push(ShapedGlyph {
-                glyph_id: glyph.glyph_id,
-                char_index: glyph.start,
-                line_index,
-                character,
-                position: Vec2::new(glyph_x_em, glyph_y_em),
-            });
-        }
-        let line_top_em = line_y_em + run.line_height * scale * 0.5;
-        let line_bottom_em = line_y_em - run.line_height * scale * 0.5;
+    for (line_index, line) in layout.lines().enumerate() {
+        let lm = line.metrics();
+        // Parley y grows downward; flip so line 0 is on top.
+        let line_top_em = -(lm.baseline - lm.ascent) * scale;
+        let line_bottom_em = -(lm.baseline + lm.descent) * scale;
         max_y_top = max_y_top.max(line_top_em);
         min_y_bottom = min_y_bottom.min(line_bottom_em);
+
+        for item in line.items() {
+            let parley::PositionedLayoutItem::GlyphRun(glyph_run) = item else {
+                continue;
+            };
+            let mut x = glyph_run.offset();
+            let baseline = glyph_run.baseline();
+            for cluster in glyph_run.run().visual_clusters() {
+                let cluster_x = x;
+                x += cluster.advance();
+                // For ligature clusters this only exposes the leading codepoint.
+                let character = cluster.source_char();
+                let char_index = cluster.text_range().start;
+                let mut gx = cluster_x;
+                for glyph in cluster.glyphs() {
+                    let glyph_x_em = (gx + glyph.x) * scale;
+                    let glyph_y_em = -(baseline + glyph.y) * scale;
+                    shaped.push(ShapedGlyph {
+                        glyph_id: glyph.id as u16,
+                        char_index,
+                        line_index,
+                        character,
+                        position: Vec2::new(glyph_x_em, glyph_y_em),
+                    });
+                    gx += glyph.advance;
+                }
+            }
+        }
     }
 
     (shaped, min_y_bottom, max_y_top)
@@ -316,8 +347,7 @@ pub struct TextMeshGlyphsComputed;
 pub struct FontMeshResources<'w> {
     meshes: ResMut<'w, Assets<Mesh>>,
     fonts: Res<'w, Assets<Font>>,
-    font_system: ResMut<'w, CosmicFontSystem>,
-    registry: ResMut<'w, FontMeshRegistry>,
+    shaper: ResMut<'w, FontMeshShaper>,
 }
 
 #[derive(QueryData)]
@@ -344,18 +374,14 @@ pub fn update_text_meshes(
         mesh: mut mesh_handle,
     } in query.iter_mut()
     {
-        let family = match res.registry.ensure_registered(
-            &text_mesh.font,
-            &res.fonts,
-            &mut res.font_system.0,
-        ) {
+        let family = match res.shaper.ensure_registered(&text_mesh.font, &res.fonts) {
             Some(r) => r.family.clone(),
             None => continue,
         };
         let Some(font_asset) = res.fonts.get(&text_mesh.font) else {
             continue;
         };
-        let Ok(font_ref) = parse_font(&font_asset.data) else {
+        let Ok(font_ref) = parse_font(font_asset.data.data()) else {
             continue;
         };
 
@@ -363,7 +389,7 @@ pub fn update_text_meshes(
             &text_mesh.text,
             &family,
             text_mesh.style.justify,
-            &mut res.font_system.0,
+            &mut res.shaper,
         );
 
         // Combined-mesh path: every TextMesh produces a single Mesh3d, so
@@ -427,18 +453,14 @@ pub fn update_glyph_meshes<M: Material>(
         default_material,
     } in query.iter()
     {
-        let family = match res.registry.ensure_registered(
-            &text_glyphs.font,
-            &res.fonts,
-            &mut res.font_system.0,
-        ) {
+        let family = match res.shaper.ensure_registered(&text_glyphs.font, &res.fonts) {
             Some(r) => r.family.clone(),
             None => continue,
         };
         let Some(font_asset) = res.fonts.get(&text_glyphs.font) else {
             continue;
         };
-        let Ok(font_ref) = parse_font(&font_asset.data) else {
+        let Ok(font_ref) = parse_font(font_asset.data.data()) else {
             continue;
         };
 
@@ -448,7 +470,7 @@ pub fn update_glyph_meshes<M: Material>(
             &text_glyphs.text,
             &family,
             text_glyphs.style.justify,
-            &mut res.font_system.0,
+            &mut res.shaper,
         );
 
         let font_id = text_glyphs.font.id();

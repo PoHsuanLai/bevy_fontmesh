@@ -1,7 +1,7 @@
 //! A Bevy plugin for generating 3D text meshes from fonts.
 //!
-//! Starting with 0.4 the plugin uses Bevy's standard [`bevy::text::Font`] asset
-//! for font loading and `cosmic-text` for shaping, so the same `Handle<Font>`
+//! The plugin uses Bevy's standard [`bevy::text::Font`] asset
+//! for font loading and `parley` for shaping, so the same `Handle<Font>`
 //! you use for 2D UI text also drives 3D text meshes. This brings real text
 //! shaping (kerning, ligatures, BiDi, complex scripts) and full OpenType/CFF
 //! support.
@@ -70,7 +70,7 @@ pub use component::{
     TextMeshStyle,
 };
 pub use system::{
-    on_font_asset_event, scale_screen_size, update_glyph_meshes, FontMeshRegistry, GlyphMeshCache,
+    on_font_asset_event, scale_screen_size, update_glyph_meshes, FontMeshShaper, GlyphMeshCache,
     TextMeshComputed, TextMeshGlyphsComputed,
 };
 
@@ -84,7 +84,7 @@ struct SharedFontMeshPlugin;
 
 impl Plugin for SharedFontMeshPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<FontMeshRegistry>()
+        app.init_resource::<FontMeshShaper>()
             .init_resource::<GlyphMeshCache>()
             .register_type::<TextMesh>()
             .register_type::<TextMeshGlyphs>()

@@ -76,7 +76,7 @@ fn setup(
             parent.spawn((
                 PointLight {
                     intensity: 200_000.0,
-                    shadows_enabled: true,
+                    shadow_maps_enabled: true,
                     color: Color::srgb(1.0, 0.95, 0.85),
                     range: 40.0,
                     ..default()
@@ -88,7 +88,7 @@ fn setup(
             parent.spawn((
                 PointLight {
                     intensity: 100_000.0,
-                    shadows_enabled: false,
+                    shadow_maps_enabled: false,
                     color: Color::srgb(0.9, 0.92, 1.0),
                     range: 40.0,
                     ..default()
@@ -100,7 +100,7 @@ fn setup(
             parent.spawn((
                 PointLight {
                     intensity: 80_000.0,
-                    shadows_enabled: false,
+                    shadow_maps_enabled: false,
                     color: Color::srgb(1.0, 1.0, 1.0),
                     range: 40.0,
                     ..default()
@@ -112,7 +112,7 @@ fn setup(
             parent.spawn((
                 PointLight {
                     intensity: 60_000.0,
-                    shadows_enabled: false,
+                    shadow_maps_enabled: false,
                     color: Color::srgb(0.7, 0.8, 1.0),
                     range: 40.0,
                     ..default()
@@ -193,7 +193,7 @@ fn animate_glyphs(
 ) {
     let t = time.elapsed_secs();
     for (anim, mat_handle) in glyph_query.iter() {
-        let Some(mat) = materials.get_mut(mat_handle) else {
+        let Some(mut mat) = materials.get_mut(mat_handle) else {
             continue;
         };
 

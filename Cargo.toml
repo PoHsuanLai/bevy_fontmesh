@@ -1,6 +1,6 @@
 [package]
 name = "bevy_fontmesh"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 authors = ["Po Hsuan Lai"]
 description = "Simple and focused Bevy plugin for generating 3D text meshes from fonts"
@@ -14,21 +14,23 @@ categories = ["graphics", "game-engines", "rendering"]
 exclude = ["assets/", "images/"]
 
 [dependencies]
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.19", default-features = false, features = [
     "bevy_asset",
     "bevy_pbr",
     "bevy_render",
     "bevy_text",
 ] }
-fontmesh = "0.5"
-cosmic-text = "0.16"
+fontmesh = { version = "0.6", path = "/Users/pohsuanlai/Documents/fontmesh" }
+# Bevy 0.19 shapes text with parley (replacing cosmic-text). We run our own
+# parley FontContext + LayoutContext to lay glyphs out before tessellating.
+parley = { version = "0.9", default-features = false, features = ["std"] }
 
 [[bench]]
 name = "mesh_generation"
 harness = false
 
 [dev-dependencies]
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.19", default-features = false, features = [
     "bevy_asset",
     "bevy_pbr",
     "bevy_render",
@@ -41,6 +43,6 @@ bevy = { version = "0.18", default-features = false, features = [
     "zstd_rust",
     "x11",  # or "wayland" depending on your platform
 ] }
-fontmesh = "0.5"
+fontmesh = { version = "0.6", path = "/Users/pohsuanlai/Documents/fontmesh" }
 rand = "0.9.2"
 criterion = { version = "0.5", features = ["html_reports"] }
