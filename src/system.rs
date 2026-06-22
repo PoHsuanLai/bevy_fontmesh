@@ -11,9 +11,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy::text::Font;
 use fontmesh::{glyph_to_mesh_3d, parse_font, FontRef, GlyphId};
-use parley::{
-    Alignment, AlignmentOptions, FontContext, FontFamily, LayoutContext, StyleProperty,
-};
+use parley::{Alignment, AlignmentOptions, FontContext, FontFamily, LayoutContext, StyleProperty};
 
 // Parley shapes in pixel space. We pick a fixed pixel size and divide
 // back out so positions land in the same em-normalized space (1 em = 1.0)

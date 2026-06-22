@@ -15,12 +15,12 @@ exclude = ["assets/", "images/"]
 
 [dependencies]
 bevy = { version = "0.19", default-features = false, features = [
-    "bevy_asset",
-    "bevy_pbr",
-    "bevy_render",
-    "bevy_text",
+  "bevy_asset",
+  "bevy_pbr",
+  "bevy_render",
+  "bevy_text",
 ] }
-fontmesh = { version = "0.6", path = "/Users/pohsuanlai/Documents/fontmesh" }
+fontmesh = "0.6"
 # Bevy 0.19 shapes text with parley (replacing cosmic-text). We run our own
 # parley FontContext + LayoutContext to lay glyphs out before tessellating.
 parley = { version = "0.9", default-features = false, features = ["std"] }
@@ -31,18 +31,18 @@ harness = false
 
 [dev-dependencies]
 bevy = { version = "0.19", default-features = false, features = [
-    "bevy_asset",
-    "bevy_pbr",
-    "bevy_render",
-    "bevy_text",
-    "bevy_winit",
-    "bevy_core_pipeline",
-    "default_font",
-    "multi_threaded",
-    "tonemapping_luts",
-    "zstd_rust",
-    "x11",  # or "wayland" depending on your platform
+  "bevy_asset",
+  "bevy_pbr",
+  "bevy_render",
+  "bevy_text",
+  "bevy_winit",
+  "bevy_core_pipeline",
+  "default_font",
+  "multi_threaded",
+  "tonemapping_luts",
+  "zstd_rust",
+  "x11",                # or "wayland" depending on your platform
 ] }
-fontmesh = { version = "0.6", path = "/Users/pohsuanlai/Documents/fontmesh" }
+fontmesh = "0.6"
 rand = "0.9.2"
 criterion = { version = "0.5", features = ["html_reports"] }
