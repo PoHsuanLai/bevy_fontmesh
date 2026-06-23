@@ -15,14 +15,14 @@ A simple and focused Bevy plugin for generating 3D text meshes from fonts. Power
 
 Turns the same `Handle<bevy::text::Font>` you already use for Bevy's 2D UI text into a 3D extruded mesh. You control extrusion depth, anchor, justification, and subdivision quality; Bevy handles materials, lighting, and rendering.
 
-Under the hood, `cosmic-text` shapes the text (kerning, ligatures, BiDi, complex scripts) and [fontmesh](https://crates.io/crates/fontmesh) tessellates each glyph.
+Under the hood, `parley` shapes the text (kerning, ligatures, BiDi, complex scripts) and [fontmesh](https://crates.io/crates/fontmesh) tessellates each glyph.
 
 ## Quick Start
 
 ```toml
 [dependencies]
-bevy = "0.18"
-bevy_fontmesh = "0.5"
+bevy = "0.19"
+bevy_fontmesh = "0.6"
 ```
 
 ```rust
@@ -103,6 +103,7 @@ cargo run --release --example showcase     # Metallic "BEVY" with orbiting camer
 
 | bevy_fontmesh | Bevy |
 | ------------- | ---- |
+| 0.6           | 0.19 |
 | 0.2 – 0.5     | 0.18 |
 | 0.1           | 0.17 |
 

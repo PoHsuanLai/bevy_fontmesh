@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-23
+
+### Changed - BREAKING
+
+- **Updated to Bevy 0.19.** bevy_fontmesh 0.6 requires Bevy 0.19; use 0.5 for Bevy 0.18.
+- **Text shaping now runs on `parley` instead of `cosmic-text`.** Bevy 0.19 replaced cosmic-text with parley, so the plugin maintains its own parley `FontContext` + `LayoutContext` to lay glyphs out before tessellating. `Font.data` is now a parley `Blob`. Behavior is equivalent for callers, but the shaping path was rewritten.
+
+### Changed
+
+- Bumped `fontmesh` 0.5 → 0.6 (skrifa/glyph-id API).
+- Examples and benches updated for the Bevy 0.19 API.
+
 ## [0.5.0] - 2026-05-29
 
 ### Changed - BREAKING
