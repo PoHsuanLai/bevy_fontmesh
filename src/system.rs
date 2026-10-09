@@ -53,7 +53,6 @@ impl FontMeshShaper {
         let id = handle.id();
         if !self.registered.contains_key(&id) {
             let font_asset = fonts.get(id)?;
-            // `Font::data` is already a `fontique::Blob<u8>` in Bevy 0.19.
             let registered = self
                 .font_cx
                 .collection

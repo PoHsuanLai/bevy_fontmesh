@@ -21,8 +21,8 @@ Under the hood, `parley` shapes the text (kerning, ligatures, BiDi, complex scri
 
 ```toml
 [dependencies]
-bevy = "0.19"
-bevy_fontmesh = "0.6"
+bevy = "0.20"
+bevy_fontmesh = "0.7"
 ```
 
 ```rust
@@ -103,6 +103,7 @@ cargo run --release --example showcase     # Metallic "BEVY" with orbiting camer
 
 | bevy_fontmesh | Bevy |
 | ------------- | ---- |
+| 0.7           | 0.20 |
 | 0.6           | 0.19 |
 | 0.2 – 0.5     | 0.18 |
 | 0.1           | 0.17 |

@@ -4,7 +4,7 @@
 //! font parsing, per-character mesh generation, vertex assembly,
 //! and justification/anchor offset calculation.
 //!
-//! Note: the production code shapes via parley (Bevy 0.19's text stack) rather
+//! Note: the production code shapes via parley (Bevy's text stack) rather
 //! than the hand-rolled advance-based layout this file mirrors. The bench keeps
 //! the simple layout (cursor_x += advance) because it isolates the parts of the
 //! pipeline that *we* still own — outline tessellation and mesh assembly.

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-09
+
+### Changed - BREAKING
+
+- **Updated to Bevy 0.20.** bevy_fontmesh 0.7 requires Bevy 0.20; use 0.6 for Bevy 0.19.
+- Bumped `fontmesh` 0.6 → 0.7 (`skrifa` 0.39 → 0.44).
+- Bumped `parley` 0.9 → 0.11 to match `bevy_text` 0.20, so a single copy of `parley`/`skrifa` is built.
+
+No public API changes for callers.
+
 ## [0.6.0] - 2026-06-23
 
 ### Changed - BREAKING
